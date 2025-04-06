@@ -1,0 +1,54 @@
+{
+  "roles": [
+    {
+      "name": "fluent_bit_writer",
+      "payload": {
+        "cluster": [
+          "all",
+          "manage_index_templates",
+          "manage_ilm"
+        ],
+        "indices": [
+          {
+            "names": [
+              "example-*"
+            ],
+            "privileges": [
+              "create",
+              "create_index",
+              "manage",
+              "manage_ilm",
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "portal_api_reader",
+      "payload": {
+        "cluster": [
+          "all",
+          "manage_index_templates",
+          "manage_ilm"
+        ],
+        "indices": [
+          {
+            "names": [
+              "example-*"
+            ],
+            "privileges": [
+              "create",
+              "create_index",
+              "manage",
+              "manage_ilm",
+              "write",
+              "read",
+              "view_index_metadata"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

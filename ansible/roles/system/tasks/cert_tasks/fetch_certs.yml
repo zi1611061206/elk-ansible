@@ -1,0 +1,24 @@
+---
+- name: Fetch Elasticsearch certificates from tls_host to ansible controller
+  block:
+    - name: Fetch CA certificate
+      ansible.builtin.fetch:
+        src: "{{ tls_output_dir }}/ca/ca.crt"
+        dest: "{{ tls_output_dir }}/ca/ca.crt"
+        flat: yes
+
+    - name: Fetch node-specific certificate
+      ansible.builtin.fetch:
+        src: "{{ tls_output_dir }}/{{ item }}/{{ item }}.crt"
+        dest: "{{ tls_output_dir }}/{{ item }}/{{ item }}.crt"
+        flat: yes
+      loop: "{{ groups['nodes'] }}"
+
+    - name: Fetch node-specific key
+      ansible.builtin.fetch:
+        src: "{{ tls_output_dir }}/{{ item }}/{{ item }}.key"
+        dest: "{{ tls_output_dir }}/{{ item }}/{{ item }}.key"
+        flat: yes
+      loop: "{{ groups['nodes'] }}"
+  delegate_to: "{{ tls_host }}"
+  run_once: true

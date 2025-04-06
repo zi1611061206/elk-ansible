@@ -1,0 +1,31 @@
+---
+- name: Generate Elasticsearch server certificate for each node
+  block:
+    - name: Check certs.zip file exists
+      ansible.builtin.stat:
+        path: "{{ tls_node_zip_file_path }}"
+      register: certs_zip
+
+    - name: Remove the old certs.zip file if exist
+      ansible.builtin.file:
+        path: "{{ tls_node_zip_file_path }}"
+        state: absent
+      when: certs_zip.stat.exists
+
+    - name: Create Server certificates & keys
+      ansible.builtin.command: >
+        bin/elasticsearch-certutil cert --silent --pem
+        --in '{{ tls_instances_file_path }}'
+        --ca-cert '{{ tls_output_dir }}/ca/ca.crt'
+        --ca-key '{{ tls_output_dir }}/ca/ca.key'
+        --out '{{ tls_node_zip_file_path }}'
+      args:
+        chdir: "{{ elasticsearch_artifact_extracted_dir }}"
+
+    - name: Extract Server certificates & keys
+      ansible.builtin.unarchive:
+        src: "{{ tls_node_zip_file_path }}"
+        dest: "{{ tls_output_dir }}"
+        remote_src: true
+  delegate_to: "{{ tls_host }}"
+  run_once: true

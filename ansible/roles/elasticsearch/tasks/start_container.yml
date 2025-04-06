@@ -1,0 +1,40 @@
+---
+- name: Start Elasticsearch container
+  community.docker.docker_container:
+    name: "{{ elasticsearch_container_full_name }}"
+    image: "{{ elasticsearch_image_full_name }}"
+    state: started
+    restart_policy: "{{ elasticsearch_container_restart_policy }}"
+    network_mode: "{{ elasticsearch_network_mode }}"
+    volumes: "{{ elasticsearch_volumes + elasticsearch_extra_volumes }}"
+    healthcheck: "{{ elasticsearch_healthcheck if elasticsearch_healthcheck_enabled else omit }}"
+    ulimits: "{{ elasticsearch_dimensions }}"
+    env:
+      NODE_NAME: "{{ inventory_hostname }}"
+      DISCOVERY_SEED_HOSTS: "{{ groups['nodes'] | difference([inventory_hostname]) | map('regex_replace', '^(.*)$', '\\1.local') | join(',') }}"
+      INITIAL_MASTER_NODES: "{{ groups['nodes'] | join(',') }}"
+      ELASTIC_PASSWORD: "{{ elasticsearch_bootstrap_password }}"
+  register: elasticsearch_container_start_result
+  retries: "{{ elasticsearch_max_retries }}"
+  delay: "{{ elasticsearch_retry_interval }}"
+  until: elasticsearch_container_start_result is success
+  notify: Restart Elasticsearch
+
+- name: Flush to restart Elasticsearch now
+  meta: flush_handlers
+
+- name: Wait for Elasticsearch ready
+  ansible.builtin.uri:
+    url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_cluster/health"
+    method: GET
+    url_username: "elastic"
+    url_password: "{{ elasticsearch_bootstrap_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: 200
+  register: es_cluster_health
+  until: es_cluster_health.json is mapping and es_cluster_health.json.get('status') == "green"
+  retries: "{{ elasticsearch_max_retries }}"
+  delay: "{{ elasticsearch_retry_interval }}"
+  ignore_errors: yes
+  no_log: true

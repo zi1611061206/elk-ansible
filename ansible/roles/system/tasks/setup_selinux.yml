@@ -1,0 +1,14 @@
+---
+- name: Setup SELinux
+  block:
+    - name: Put SELinux in permissive mode, logging actions that would be blocked.
+      ansible.posix.selinux:
+        policy: targeted
+        state: permissive
+
+    - name: Disable SELinux
+      ansible.posix.selinux:
+        state: disabled
+  when:
+    - ansible_facts.os_family == 'RedHat'
+    - disable_selinux | bool

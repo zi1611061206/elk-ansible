@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "username": "fluent_bit",
+      "payload": {
+        "password": "change_me",
+        "roles": ["fluent_bit_writer"]
+      }
+    },
+    {
+      "username": "portal_api",
+      "payload": {
+        "password": "change_me",
+        "roles": ["portal_api_reader"]
+      }
+    }
+  ]
+}

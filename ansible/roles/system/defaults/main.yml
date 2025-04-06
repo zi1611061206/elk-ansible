@@ -1,0 +1,15 @@
+---
+disable_selinux: false
+disable_swap: false
+enable_iptables_config: false
+firewalld_zone: "public"
+
+elasticsearch_artifact_repo: "https://artifacts.elastic.co/downloads/elasticsearch"
+elasticsearch_artifact_version: "{{ elastic_version }}"
+elasticsearch_artifact_extracted_dir: "{{ tls_working_dir }}/elasticsearch-{{ elasticsearch_artifact_version }}"
+
+tls_instances_template_file_name: "instances.yml.j2"
+
+tls_instances_file_path: "{{ tls_working_dir }}/instances.yml"
+tls_ca_zip_file_path: "{{ tls_working_dir }}/ca.zip"
+tls_node_zip_file_path: "{{ tls_working_dir }}/certs.zip"

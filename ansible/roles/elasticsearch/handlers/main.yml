@@ -1,0 +1,8 @@
+---
+- name: Restart Elasticsearch Container
+  community.docker.docker_container:
+    name: "{{ elasticsearch_container_full_name }}"
+    state: started
+    restart: true
+  become: true
+  listen: "Restart Elasticsearch"

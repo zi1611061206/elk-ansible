@@ -1,0 +1,143 @@
+---
+- name: Disable known firewall services (if requested)
+  ansible.builtin.systemd:
+    name: "{{ item.service }}"
+    state: stopped
+    enabled: no
+  loop:
+    - { os: 'RedHat', service: 'firewalld' }
+    - { os: 'Debian', service: 'ufw' }
+    - { os: 'RedHat', service: 'nftables' }
+    - { os: 'Debian', service: 'nftables' }
+  when:
+    - ansible_facts.os_family == item.os
+    - disable_firewall | bool
+  failed_when: false
+
+- name: Check if firewalld is available and active
+  ansible.builtin.shell: |
+    which firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld && echo "active" || echo "inactive"
+  register: check_firewalld
+  changed_when: false
+  failed_when: false
+
+- name: Debug firewalld status
+  ansible.builtin.debug:
+    msg: "firewalld: {{ check_firewalld.stdout_lines[-1] }}"
+
+- name: Check if ufw is available and active
+  ansible.builtin.shell: |
+    if which ufw &>/dev/null; then
+      status=$(ufw status 2>/dev/null | grep -i '^Status:' | awk '{print tolower($2)}')
+      if [ "$status" = "active" ]; then echo "active"; else echo "inactive"; fi
+    else
+      echo "not_found"
+    fi
+  register: check_ufw
+  changed_when: false
+  failed_when: false
+
+- name: Debug ufw status
+  ansible.builtin.debug:
+    msg: "ufw: {{ check_ufw.stdout_lines[-1] }}"
+
+- name: Check if nftables is available and has active ruleset
+  ansible.builtin.shell: |
+    if which nft &>/dev/null && nft list ruleset 2>/dev/null | grep -q "table"; then
+      echo "active"
+    else
+      echo "inactive"
+    fi
+  register: check_nft
+  changed_when: false
+  failed_when: false
+
+- name: Debug nftables status
+  ansible.builtin.debug:
+    msg: "nftables: {{ check_nft.stdout_lines[-1] }}"
+
+- name: Check if iptables is available and has rules
+  ansible.builtin.shell: |
+    if which iptables &>/dev/null && iptables -L -n 2>/dev/null | grep -q "^Chain"; then
+      echo "active"
+    else
+      echo "inactive"
+    fi
+  register: check_iptables
+  changed_when: false
+  failed_when: false
+
+- name: Debug iptables status
+  ansible.builtin.debug:
+    msg: "iptables: {{ check_iptables.stdout_lines[-1] }}"
+
+- name: Get active firewall tool (prioritized)
+  set_fact:
+    firewall_tool: >-
+      {% if check_firewalld.stdout_lines[-1] == 'active' %} firewalld
+      {% elif check_ufw.stdout_lines[-1] == 'active' %} ufw
+      {% elif check_nft.stdout_lines[-1] == 'active' %} nftables
+      {% elif check_iptables.stdout_lines[-1] == 'active' %} iptables
+      {% else %} none
+      {% endif %}
+
+- name: Show selected active firewall tool
+  ansible.builtin.debug:
+    msg: "Selected active firewall tool: {{ firewall_tool }}"
+
+- name: Warn for nftables (manual configuration required)
+  ansible.builtin.debug:
+    msg: |
+      [NOTICE] Firewall service 'nftables' is currently active on this host.
+      Please ensure your ports is open in the active ruleset.
+      This can be done manually or through your provisioning templates.
+  when:
+    - not disable_firewall | bool
+    - firewall_tool == "nftables"
+
+- name: Warn if no supported firewall tool is active
+  ansible.builtin.debug:
+    msg: |
+      [WARNING] No supported active firewall tool was detected on this host.
+      your ports has NOT been explicitly opened.
+      Please verify firewall configuration manually to ensure accessibility.
+  when:
+    - not disable_firewall | bool
+    - firewall_tool == "none"
+
+# START: Elasticsearch firewall configuration
+- name: Open port for Elasticsearch - firewalld
+  ansible.builtin.firewalld:
+    port: "{{ elasticsearch_port }}/tcp"
+    permanent: true
+    state: enabled
+    zone: "{{ firewalld_zone | default('public') }}"
+  when:
+    - not disable_firewall | bool
+    - firewall_tool == "firewalld"
+  notify: Reload firewalld
+  ignore_errors: true
+
+- name: Open port for Elasticsearch - ufw
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ elasticsearch_port }}"
+    proto: tcp
+  when:
+    - not disable_firewall | bool
+    - firewall_tool == "ufw"
+  ignore_errors: true
+
+- name: Open port for Elasticsearch - iptables
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ elasticsearch_port }}"
+    jump: ACCEPT
+    comment: "Allow Elasticsearch port"
+  when:
+    - not disable_firewall | bool
+    - firewall_tool == "iptables"
+    - enable_iptables_config | default(false) | bool
+  ignore_errors: true
+# END: Elasticsearch firewall configuration

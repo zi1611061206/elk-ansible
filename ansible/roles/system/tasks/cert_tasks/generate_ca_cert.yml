@@ -1,0 +1,36 @@
+---
+- name: Generate Elasticsearch CA certificate
+  block:
+    - name: Ensure TLS output directory exists
+      ansible.builtin.file:
+        path: "{{ tls_output_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Check ca.zip file exists
+      ansible.builtin.stat:
+        path: "{{ tls_ca_zip_file_path }}"
+      register: ca_zip
+
+    - name: Remove the old ca.zip file if exists
+      ansible.builtin.file:
+        path: "{{ tls_ca_zip_file_path }}"
+        state: absent
+      when: ca_zip.stat.exists
+
+    - name: Create CA certificate & key
+      ansible.builtin.command: >
+        bin/elasticsearch-certutil ca --silent --pem
+        --out '{{ tls_ca_zip_file_path }}'
+      args:
+        chdir: "{{ elasticsearch_artifact_extracted_dir }}"
+
+    - name: Extract CA certificate & key
+      ansible.builtin.unarchive:
+        src: "{{ tls_ca_zip_file_path }}"
+        dest: "{{ tls_output_dir }}"
+        remote_src: true
+  delegate_to: "{{ tls_host }}"
+  run_once: true

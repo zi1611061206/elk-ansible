@@ -1,0 +1,25 @@
+---
+- name: Setup local DNS entries
+  block:
+    - name: Build list of host entries
+      ansible.builtin.set_fact:
+        elk_host_entries: "{{ elk_host_entries | default([]) + [ hostvars[item]['ansible_host'] ~ ' ' ~ (item ~ '.local') ] }}"
+      loop: "{{ groups['nodes'] }}"
+
+    - name: Remove duplicate host entries
+      ansible.builtin.set_fact:
+        elk_host_entries: "{{ elk_host_entries | unique }}"
+
+    - name: Build block content
+      ansible.builtin.set_fact:
+        elk_block_content: "{{ elk_host_entries | join('\n') }}"
+  run_once: true
+
+- name: Update /etc/hosts with inventory-defined IPs and hostnames
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker_begin: "BEGIN ELK"
+    marker_end: "END ELK"
+    block: "{{ elk_block_content }}"
+    backup: yes
+  become: yes

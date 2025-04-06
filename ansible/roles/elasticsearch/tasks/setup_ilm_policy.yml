@@ -1,0 +1,44 @@
+---
+- block:
+    - name: Setup policy interval check
+      ansible.builtin.uri:
+          url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_cluster/settings"
+          url_username: elastic
+          url_password: "{{ elasticsearch_bootstrap_password }}"
+          method: PUT
+          status_code: 200
+          validate_certs: false
+          force_basic_auth: true
+          body: {"transient" : {"indices.lifecycle.poll_interval": "{{ elasticsearch_policy_interval_check }}"}}
+          body_format: json
+
+    - name: Find & read ILM policies from JSON file
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      with_first_found:
+        - "{{ node_custom_config_directory }}/elasticsearch/{{ inventory_hostname }}/ilm_policies.json"
+        - "{{ node_custom_config_directory }}/elasticsearch/ilm_policies.json"
+        - "{{ node_custom_config_directory }}/ilm_policies.json"
+        - "ilm_policies.json"
+      register: ilm_policies_file
+      delegate_to: localhost
+
+    - name: Parse ILM policies
+      set_fact:
+        elasticsearch_ilm_policies: "{{ ilm_policies_file.results[0].content | b64decode | from_json }}"
+
+    - name: Setup ILM policies
+      ansible.builtin.uri:
+          url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_ilm/policy/{{ item.name }}"
+          url_username: elastic
+          url_password: "{{ elasticsearch_bootstrap_password }}"
+          method: PUT
+          status_code: 200
+          validate_certs: false
+          force_basic_auth: true
+          body: "{{ item.payload | to_json }}"
+          body_format: json
+      with_items: "{{ elasticsearch_ilm_policies.policies }}"
+      when: (elasticsearch_ilm_policies.get('policies', []) | length) > 0
+  no_log: false
+  run_once: true

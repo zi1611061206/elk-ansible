@@ -2,7 +2,13 @@
 - name: Gather facts
   hosts: all
   gather_facts: true
-  tasks:
-    - name: Show hostnames
-      debug:
-        msg: "{{ ansible_facts.hostname }}"
+
+- name: Deploy Elasticsearch cluster
+  hosts: elasticsearch_hosts
+  gather_facts: true
+  become: true
+  vars:
+    tls_host: "{{ groups['tls_host'][0] }}"
+  roles:
+    - system
+    - elasticsearch

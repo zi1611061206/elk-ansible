@@ -1,0 +1,128 @@
+---
+# Container Name
+elasticsearch_container_name_prefix: "{{ container_name_prefix ~ '-' if container_name_prefix else '' }}"
+elasticsearch_container_name_suffix: "{{ '-' ~ container_name_suffix if container_name_suffix else '' }}"
+elasticsearch_container_full_name: "{{ elasticsearch_container_name_prefix }}elasticsearch{{ elasticsearch_container_name_suffix }}"
+
+# Container Image
+elasticsearch_version: "{{ elastic_version | default('8.12.2') }}"
+elasticsearch_registry: "docker.elastic.co"
+elasticsearch_namespace: "elasticsearch"
+elasticsearch_image: "{{ elasticsearch_registry }}/{{ elasticsearch_namespace }}/elasticsearch"
+elasticsearch_tag: "{{ elasticsearch_version }}"
+elasticsearch_image_full_name: "{{ elasticsearch_image }}:{{ elasticsearch_tag }}"
+
+# Container Network
+elasticsearch_network_mode: "{{ container_network_mode | default('host') }}"
+elasticsearch_protocol: "{{ (elasticsearch_security_enabled | bool) | ternary('https', 'http') }}"
+elasticsearch_host: "0.0.0.0"
+elasticsearch_port: 9200
+elasticsearch_monitor_port: "{{ elasticsearch_port }}"
+
+# Container Healthcheck
+elasticsearch_healthcheck_retries: "{{ container_default_healthcheck_retries | default(3) }}"
+elasticsearch_healthcheck_interval: "{{ container_default_healthcheck_interval | default(30) }}s"
+elasticsearch_healthcheck_timeout: "{{ container_default_healthcheck_timeout | default(30) }}s"
+elasticsearch_healthcheck_start_period: "{{ container_default_healthcheck_start_period | default(5) }}s"
+elasticsearch_healthcheck_enabled: "{{ container_healthcheck_enabled | default(true) }}"
+elasticsearch_healthcheck_cmd: ["CMD-SHELL", "curl -f -k -u elastic:{{ elasticsearch_bootstrap_password }} {{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_monitor_port }}/_cluster/health?pretty"]
+elasticsearch_healthcheck:
+  test: "{{ elasticsearch_healthcheck_cmd if elasticsearch_healthcheck_enabled else none }}"
+  interval: "{{ elasticsearch_healthcheck_interval }}"
+  retries: "{{ elasticsearch_healthcheck_retries }}"
+  timeout: "{{ elasticsearch_healthcheck_timeout }}"
+  start_period: "{{ elasticsearch_healthcheck_start_period }}"
+
+# Container Volume
+elasticsearch_host_config_directory: "{{ node_config_directory }}/elasticsearch"
+elasticsearch_container_config_directory: "/usr/share/elasticsearch/config"
+
+elasticsearch_host_log_directory: "{{ node_log_directory }}/elasticsearch"
+elasticsearch_container_log_directory: "/var/log/elasticsearch"
+
+elasticsearch_host_ca_certificates_directory: "{{ node_ca_cert_directory }}/elasticsearch"
+elasticsearch_container_ca_certificates_directory: "/usr/share/elasticsearch/config"
+
+elasticsearch_host_data_directory: "{{ elasticsearch_data_dir | default('/mnt/elasticsearch-data') }}"
+elasticsearch_container_data_directory: "/usr/share/elasticsearch/data"
+
+elasticsearch_volumes:
+  - "{{ elasticsearch_host_ca_certificates_directory }}/ca.crt:{{ elasticsearch_container_ca_certificates_directory }}/ca.crt:ro"
+  - "{{ elasticsearch_host_ca_certificates_directory }}/elasticsearch.crt:{{ elasticsearch_container_ca_certificates_directory }}/elasticsearch.crt:ro"
+  - "{{ elasticsearch_host_ca_certificates_directory }}/elasticsearch.key:{{ elasticsearch_container_ca_certificates_directory }}/elasticsearch.key:ro"
+  - "{{ elasticsearch_host_config_directory }}/elasticsearch.yml:{{ elasticsearch_container_config_directory }}/elasticsearch.yml:ro"
+  - "{{ elasticsearch_host_config_directory }}/log4j2.d:{{ elasticsearch_container_config_directory }}/log4j2.d:ro"
+  - "{{ elasticsearch_host_config_directory }}/jvm.options.d:{{ elasticsearch_container_config_directory }}/jvm.options.d:ro"
+  - "{{ elasticsearch_host_log_directory }}:{{ elasticsearch_container_log_directory }}"
+  - "{{ elasticsearch_host_data_directory }}:{{ elasticsearch_container_data_directory }}"
+  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
+  - "/etc/localtime:/etc/localtime:ro"
+  - "/proc:/host/proc:ro"
+  - "/sys:/host/sys:ro"
+
+elasticsearch_extra_volumes: "{{ container_default_extra_volumes | default([]) }}"
+
+# Container Policy
+elasticsearch_container_restart_policy: "unless-stopped"
+
+# Container Dimensions
+elasticsearch_max_open_files_soft: 65535
+elasticsearch_max_open_files_hard: 65535
+elasticsearch_max_memory_lock_soft: -1
+elasticsearch_max_memory_lock_hard: -1
+elasticsearch_max_processes_soft: 65535
+elasticsearch_max_processes_hard: 65535
+elasticsearch_dimensions:
+  - "nofile:{{ elasticsearch_max_open_files_soft }}:{{ elasticsearch_max_open_files_hard }}"
+  - "memlock:{{elasticsearch_max_memory_lock_soft}}:{{ elasticsearch_max_memory_lock_hard }}"
+  - "nproc:{{ elasticsearch_max_processes_soft }}:{{ elasticsearch_max_processes_hard }}"
+
+# Common
+elastic_owner: "1000"
+elastic_group: "{{ elastic_owner }}"
+
+# File
+elasticsearch_log4j_file: "log4j2.properties"
+
+# Template
+elasticsearch_config_template: "elasticsearch.yml.j2"
+elasticsearch_jvm_template_file_name: "jvm.options.j2"
+
+# Configs
+elasticsearch_cluster_name: "elasticsearch-cluster"
+elasticsearch_license_type: "basic"
+elasticsearch_vm_max_map_count: "262144"
+elasticsearch_security_enabled: "{{ elastic_security_enabled | default(true) }}"
+elasticsearch_transport_ssl_enabled: true
+elasticsearch_https_enabled: true
+elasticsearch_monitoring_enabled: true
+elasticsearch_index_buffer_size_percentage: "10"
+elasticsearch_check_latest_version: true
+
+# JVM
+elasticsearch_jvm_xms: "512m"
+elasticsearch_jvm_xmx: "512m"
+
+# Timing
+elasticsearch_max_retries: "12"
+elasticsearch_retry_interval: "10"
+
+# Users - Roles
+elasticsearch_bootstrap_password: "change_me" # Super user: elastic
+
+## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html
+## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html
+elasticsearch_builtin_users:
+  - username: beats_system
+    password: change_me
+  - username: apm_system
+    password: change_me
+  - username: kibana_system
+    password: change_me
+  - username: logstash_system
+    password: change_me
+  - username: remote_monitoring_user
+    password: change_me
+
+# ILM
+elasticsearch_policy_interval_check: "10m"

@@ -1,0 +1,6 @@
+---
+- import_tasks: setup_firewall.yml
+- import_tasks: setup_selinux.yml
+- import_tasks: setup_swap.yml
+- import_tasks: setup_hosts.yml
+- import_tasks: setup_certs.yml

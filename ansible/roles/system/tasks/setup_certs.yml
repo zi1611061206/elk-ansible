@@ -1,0 +1,6 @@
+---
+- ansible.builtin.import_tasks: cert_tasks/download_artifact.yml
+- ansible.builtin.import_tasks: cert_tasks/generate_instances_list.yml
+- ansible.builtin.import_tasks: cert_tasks/generate_ca_cert.yml
+- ansible.builtin.import_tasks: cert_tasks/generate_node_certs.yml
+- ansible.builtin.import_tasks: cert_tasks/fetch_certs.yml

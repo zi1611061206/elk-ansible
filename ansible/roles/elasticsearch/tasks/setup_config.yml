@@ -1,0 +1,27 @@
+---
+- name: Render Elasticsearch configuration file from template
+  ansible.builtin.template:
+    src: "{{ elasticsearch_config_template }}"
+    dest: "{{ elasticsearch_host_config_directory }}/elasticsearch.yml"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0644'
+  become: true
+
+- name: Render Elasticsearch JVM options file from template
+  ansible.builtin.template:
+    src: "{{ elasticsearch_jvm_template_file_name }}"
+    dest: "{{ elasticsearch_host_config_directory }}/jvm.options.d/custom.options"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0644'
+  become: true
+
+- name: Copy Elasticsearch Log4j2 configuration file to host
+  ansible.builtin.copy:
+    src: "{{ elasticsearch_log4j_file }}"
+    dest: "{{ elasticsearch_host_config_directory }}/log4j2.d/log4j2.properties"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0644'
+  become: true

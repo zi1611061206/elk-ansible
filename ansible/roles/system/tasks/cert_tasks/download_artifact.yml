@@ -1,0 +1,36 @@
+---
+- name: Download & extract Elasticsearch artifact
+  block:
+    - name: Ensure TLS working directory exists
+      ansible.builtin.file:
+        path: "{{ tls_working_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Get OS name
+      ansible.builtin.shell: uname -s
+      register: os_name
+      failed_when: false
+      changed_when: false
+
+    - name: Check Elasticsearch artifact exists
+      ansible.builtin.stat:
+        path: "{{ tls_working_dir }}/elasticsearch-{{ elasticsearch_artifact_version }}-linux-{{ ansible_facts.architecture }}.tar.gz"
+      register: elasticsearch_artifact_tar_file
+
+    - name: Download Elasticsearch artifact
+      ansible.builtin.get_url:
+        url: "{{ elasticsearch_artifact_repo }}/elasticsearch-{{ elasticsearch_artifact_version }}-linux-{{ ansible_facts.architecture }}.tar.gz"
+        dest: "{{ tls_working_dir }}"
+        mode: '0644'
+      when: not elasticsearch_artifact_tar_file.stat.exists
+
+    - name: Extract Elasticsearch artifact
+      ansible.builtin.unarchive:
+        src: "{{ tls_working_dir }}/elasticsearch-{{ elasticsearch_artifact_version }}-linux-{{ ansible_facts.architecture }}.tar.gz"
+        dest: "{{ tls_working_dir }}"
+        remote_src: true
+  delegate_to: "{{ tls_host }}"
+  run_once: true

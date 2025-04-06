@@ -1,0 +1,26 @@
+---
+- name: Setup swap
+  block:
+    - name: Check swap status
+      ansible.builtin.shell: "swapon --show | grep -v '^NAME' || true"
+      register: swap_status
+      changed_when: false
+      failed_when: false
+
+    - name: Disable swap if active
+      ansible.builtin.command: swapoff -a
+      when: swap_status.stdout != ""
+
+    - name: Remove swap entries from /etc/fstab
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^\S+\s+swap\s+\S+\s+\S+\s+\d+\s+\d+$'
+        replace: ''
+        backup: yes
+
+    - name: Ensure swap is not listed in /etc/fstab
+      ansible.builtin.command: mount -a
+      changed_when: false
+  when:
+    - (ansible_facts.swaptotal_mb | default(0) | int) > 0
+    - disable_swap | bool

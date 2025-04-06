@@ -1,0 +1,24 @@
+---
+- name: Copy CA certificate to all nodes
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/ca/ca.crt"
+    dest: "{{ elasticsearch_host_ca_certificates_directory }}/ca.crt"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0644'
+
+- name: Copy node-specific certificate
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}.crt"
+    dest: "{{ elasticsearch_host_ca_certificates_directory }}/elasticsearch.crt"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0644'
+
+- name: Copy node-specific key
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+    dest: "{{ elasticsearch_host_ca_certificates_directory }}/elasticsearch.key"
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: '0640'

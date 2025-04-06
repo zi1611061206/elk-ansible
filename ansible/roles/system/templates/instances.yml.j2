@@ -1,0 +1,12 @@
+# This file is used by elasticsearch-certutil to generate X.509 certificates
+# for stack components.
+#
+# Ref. https://www.elastic.co/guide/en/elasticsearch/reference/current/certutil.html#certutil-silent
+instances:
+{% for instance in instances %}
+  - name: {{ instance.name }}
+    dns:
+      - {{ instance.dns }}
+    ip:
+      - {{ instance.ip }}
+{% endfor %}

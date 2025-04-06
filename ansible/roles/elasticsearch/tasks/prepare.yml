@@ -1,0 +1,71 @@
+---
+- name: Check for latest Elasticsearch version
+  block:
+    - name: Fetch latest Elasticsearch version information
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/elastic/elasticsearch/releases/latest"
+        method: GET
+        return_content: yes
+        status_code: 200
+        body_format: json
+      register: latest_es_version_response
+      ignore_errors: yes
+      when: elasticsearch_check_latest_version | default(true) | bool
+      delegate_to: localhost
+
+    - name: Extract latest Elasticsearch version
+      set_fact:
+        latest_es_version: "{{ latest_es_version_response.json.tag_name | regex_replace('^v', '') }}"
+      when: 
+        - elasticsearch_check_latest_version | default(true) | bool
+        - latest_es_version_response.status | default(0) == 200
+
+    - name: Warn if current Elasticsearch version is not the latest
+      ansible.builtin.debug:
+        msg: |
+          [VERSION WARNING] You are running Elasticsearch version {{ elasticsearch_version }}.
+          A newer version {{ latest_es_version }} is available with important improvements and security patches.
+          It is strongly recommended to update to the latest supported version.
+          Download: https://www.elastic.co/downloads/elasticsearch
+      when: 
+        - elasticsearch_check_latest_version | default(true) | bool
+        - latest_es_version_response.status | default(0) == 200
+        - latest_es_version is defined
+        - elasticsearch_version != latest_es_version
+  run_once: true
+
+- name: Ensure Elasticsearch directories exist on host
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ elastic_owner }}"
+    group: "{{ elastic_group }}"
+    mode: "{{ item.mode }}"
+  become: true
+  loop:
+    - { path: "{{ elasticsearch_host_config_directory }}", mode: '0770' }
+    - { path: "{{ elasticsearch_host_config_directory }}/jvm.options.d", mode: '0755' }
+    - { path: "{{ elasticsearch_host_config_directory }}/log4j2.d", mode: '0755' }
+    - { path: "{{ elasticsearch_host_log_directory }}", mode: '0755' }
+    - { path: "{{ elasticsearch_host_data_directory }}", mode: '0770' }
+    - { path: "{{ elasticsearch_host_ca_certificates_directory }}", mode: '0755' }
+  register: dir_result
+  failed_when: dir_result.failed and not dir_result.skipped
+
+- name: Resize VM max_map_count
+  ansible.posix.sysctl:
+    name: vm.max_map_count
+    value: "{{ elasticsearch_vm_max_map_count | int }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  when: (elasticsearch_vm_max_map_count | default(0) | int) > 65536
+
+- name: Check Elasticsearch http server port in use
+  ansible.builtin.wait_for:
+    port: "{{ elasticsearch_port | int }}"
+    state: drained
+    timeout: 10
+  ignore_errors: true
+  register: http_server_port_check_result
+  failed_when: http_server_port_check_result.failed | default(false)
