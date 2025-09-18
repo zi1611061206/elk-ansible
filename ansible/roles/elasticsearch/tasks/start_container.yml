@@ -33,7 +33,7 @@
     validate_certs: false
     status_code: 200
   register: es_cluster_health
-  until: es_cluster_health.json is mapping and es_cluster_health.json.get('status') == "green"
+  until: es_cluster_health.json is mapping and es_cluster_health.json.get('status') in ["green", "yellow"]
   retries: "{{ elasticsearch_max_retries }}"
   delay: "{{ elasticsearch_retry_interval }}"
   ignore_errors: yes
