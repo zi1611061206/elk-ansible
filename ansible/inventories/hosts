@@ -13,3 +13,6 @@ localhost ansible_connection=local
 
 [elasticsearch_hosts:children]
 nodes
+
+[kibana_hosts:children]
+nodes

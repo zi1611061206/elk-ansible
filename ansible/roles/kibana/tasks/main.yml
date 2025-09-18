@@ -1,0 +1,18 @@
+---
+- name: "Prepare for Kibana"
+  ansible.builtin.import_tasks: prepare.yml
+
+- name: "Setup Kibana certificates"
+  ansible.builtin.import_tasks: setup_certs.yml
+  when: kibana_security_enabled | bool
+  notify: Restart Kibana
+
+- name: "Setup Kibana configuration"
+  ansible.builtin.import_tasks: setup_config.yml
+  notify: Restart Kibana
+
+- name: "Pull Kibana image"
+  ansible.builtin.import_tasks: pull_image.yml
+
+- name: "Start Kibana container"
+  ansible.builtin.import_tasks: start_container.yml

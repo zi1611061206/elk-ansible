@@ -1,0 +1,9 @@
+---
+- name: "Render Kibana configuration file from template"
+  ansible.builtin.template:
+    src: "{{ kibana_config_template }}"
+    dest: "{{ kibana_host_config_directory }}/kibana.yml"
+    owner: "{{ kibana_owner }}"
+    group: "{{ kibana_group }}"
+    mode: "0644"
+  become: true

@@ -36,3 +36,23 @@ tls_output_dir: "{{ tls_working_dir }}/es-certificates"
 # Elasticsearch options
 elasticsearch_uid: "1000"
 elasticsearch_gid: "{{ elasticsearch_uid }}"
+elasticsearch_http_port: 9200
+elasticsearch_bootstrap_password: "change_me" # Super user: elastic
+
+## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html
+## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html
+elasticsearch_builtin_users:
+  - username: beats_system
+    password: change_me
+  - username: apm_system
+    password: change_me
+  - username: kibana_system
+    password: change_me
+  - username: logstash_system
+    password: change_me
+  - username: remote_monitoring_user
+    password: change_me
+
+# Kibana options
+kibana_uid: "1000"
+kibana_gid: "{{ kibana_uid }}"
