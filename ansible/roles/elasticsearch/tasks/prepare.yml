@@ -1,5 +1,5 @@
 ---
-- name: Check for latest Elasticsearch version
+- name: "Check for latest Elasticsearch version"
   block:
     - name: Fetch latest Elasticsearch version information
       ansible.builtin.uri:
@@ -34,25 +34,27 @@
         - elasticsearch_version != latest_es_version
   run_once: true
 
-- name: Ensure Elasticsearch directories exist on host
+- name: "Ensure Elasticsearch directories exist on host"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: directory
-    owner: "{{ elastic_owner }}"
-    group: "{{ elastic_group }}"
-    mode: "{{ item.mode }}"
+    owner: "{{ item.owner | default(elasticsearch_owner) }}"
+    group: "{{ item.group | default(elasticsearch_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
   become: true
   loop:
     - { path: "{{ elasticsearch_host_config_directory }}", mode: '0770' }
-    - { path: "{{ elasticsearch_host_config_directory }}/jvm.options.d", mode: '0755' }
-    - { path: "{{ elasticsearch_host_config_directory }}/log4j2.d", mode: '0755' }
-    - { path: "{{ elasticsearch_host_log_directory }}", mode: '0755' }
+    - { path: "{{ elasticsearch_host_config_directory }}/jvm.options.d" }
+    - { path: "{{ elasticsearch_host_config_directory }}/log4j2.d" }
+    - { path: "{{ elasticsearch_host_log_directory }}" }
     - { path: "{{ elasticsearch_host_data_directory }}", mode: '0770' }
-    - { path: "{{ elasticsearch_host_ca_certificates_directory }}", mode: '0755' }
+    - { path: "{{ elasticsearch_host_ca_certificates_directory }}" }
+  loop_control:
+    label: "{{ item.path }}"
   register: dir_result
   failed_when: dir_result.failed and not dir_result.skipped
 
-- name: Resize VM max_map_count
+- name: "Resize VM max_map_count"
   ansible.posix.sysctl:
     name: vm.max_map_count
     value: "{{ elasticsearch_vm_max_map_count | int }}"
@@ -61,7 +63,7 @@
     reload: yes
   when: (elasticsearch_vm_max_map_count | default(0) | int) > 65536
 
-- name: Check Elasticsearch http server port in use
+- name: "Check Elasticsearch http server port in use"
   ansible.builtin.wait_for:
     port: "{{ elasticsearch_port | int }}"
     state: drained

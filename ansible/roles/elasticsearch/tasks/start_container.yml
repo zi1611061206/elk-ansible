@@ -1,5 +1,5 @@
 ---
-- name: Start Elasticsearch container
+- name: "Start Elasticsearch container"
   community.docker.docker_container:
     name: "{{ elasticsearch_container_full_name }}"
     image: "{{ elasticsearch_image_full_name }}"
@@ -10,8 +10,8 @@
     healthcheck: "{{ elasticsearch_healthcheck if elasticsearch_healthcheck_enabled else omit }}"
     ulimits: "{{ elasticsearch_dimensions }}"
     env:
-      NODE_NAME: "{{ inventory_hostname }}"
-      DISCOVERY_SEED_HOSTS: "{{ groups['nodes'] | difference([inventory_hostname]) | map('regex_replace', '^(.*)$', '\\1.local') | join(',') }}"
+      NODE_NAME: "{{ inventory_hostname_short }}"
+      DISCOVERY_SEED_HOSTS: "{{ groups['nodes'] | difference([inventory_hostname]) | join(',') }}"
       INITIAL_MASTER_NODES: "{{ groups['nodes'] | join(',') }}"
       ELASTIC_PASSWORD: "{{ elasticsearch_bootstrap_password }}"
   register: elasticsearch_container_start_result
@@ -20,12 +20,12 @@
   until: elasticsearch_container_start_result is success
   notify: Restart Elasticsearch
 
-- name: Flush to restart Elasticsearch now
+- name: "Flush to restart Elasticsearch now"
   meta: flush_handlers
 
-- name: Wait for Elasticsearch ready
+- name: "Wait for Elasticsearch ready"
   ansible.builtin.uri:
-    url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_cluster/health"
+    url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}:{{ elasticsearch_port }}/_cluster/health"
     method: GET
     url_username: "elastic"
     url_password: "{{ elasticsearch_bootstrap_password }}"
@@ -38,3 +38,4 @@
   delay: "{{ elasticsearch_retry_interval }}"
   ignore_errors: yes
   no_log: true
+  become: true

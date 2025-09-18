@@ -1,5 +1,5 @@
 ---
-- name: Pull Elasticsearch image
+- name: "Pull Elasticsearch image"
   community.docker.docker_image:
     name: "{{ elasticsearch_image_full_name }}"
     source: pull

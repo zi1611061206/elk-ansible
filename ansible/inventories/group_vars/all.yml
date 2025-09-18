@@ -22,6 +22,7 @@ container_default_healthcheck_interval: 30
 container_default_healthcheck_timeout: 30
 container_default_healthcheck_start_period: 5
 container_healthcheck_enabled: true
+container_default_restart_policy: "unless-stopped"
 
 # Elastic options
 elastic_version: "8.12.2"
@@ -31,3 +32,7 @@ elastic_security_enabled: true
 enforce_secure_passwords: false
 tls_working_dir: "/tmp/elk-ansible"
 tls_output_dir: "{{ tls_working_dir }}/es-certificates"
+
+# Elasticsearch options
+elasticsearch_uid: "1000"
+elasticsearch_gid: "{{ elasticsearch_uid }}"
