@@ -1,14 +1,25 @@
 ---
 - name: Setup local DNS entries
   block:
-    - name: Build list of host entries
+    - name: Build list of host entries (IP FQDN SHORT)
       ansible.builtin.set_fact:
-        elk_host_entries: "{{ elk_host_entries | default([]) + [ hostvars[item]['ansible_host'] ~ ' ' ~ (item ~ '.local') ] }}"
-      loop: "{{ groups['nodes'] }}"
+        elk_host_entries: >-
+          {{ (elk_host_entries | default([])) + [
+              (
+                (
+                  hostvars[item].ansible_host
+                  if (hostvars[item].get('ansible_host','') is regex('^\\d+\\.\\d+\\.\\d+\\.\\d+$'))
+                  else hostvars[item].get('ansible_default_ipv4', {}).get('address', 'UNKNOWN')
+                )
+                ~ ' ' ~ item
+                ~ ' ' ~ hostvars[item].inventory_hostname_short
+              )
+            ] }}
+      loop: "{{ groups['nodes'] | list | unique | sort }}"
 
-    - name: Remove duplicate host entries
+    - name: Remove duplicate host entries and sort
       ansible.builtin.set_fact:
-        elk_host_entries: "{{ elk_host_entries | unique }}"
+        elk_host_entries: "{{ elk_host_entries | unique | sort }}"
 
     - name: Build block content
       ansible.builtin.set_fact:

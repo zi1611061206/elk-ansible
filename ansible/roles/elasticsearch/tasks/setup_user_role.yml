@@ -1,6 +1,6 @@
 ---
 - block:
-    - name: Check for default passwords and warn or fail
+    - name: "Check for default passwords and warn or fail"
       block:
         - name: Warn if elastic bootstrap password is default
           ansible.builtin.debug:
@@ -10,7 +10,7 @@
               Please update the password immediately to protect your cluster from unauthorized access.
           when: elasticsearch_bootstrap_password == "change_me"
         
-        - name: Warn if any built-in user password is default
+        - name: "Warn if any built-in user password is default"
           ansible.builtin.debug:
             msg: |
               [SECURITY WARNING] Built-in user '{{ item.username }}' is still using the default password 'change_me'.
@@ -19,7 +19,7 @@
           with_items: "{{ elasticsearch_builtin_users }}"
           when: item.password == "change_me"
         
-        - name: Fail deployment if default passwords are used and enforcement is enabled
+        - name: "Fail deployment if default passwords are used and enforcement is enabled"
           ansible.builtin.fail:
             msg: "Deployment failed: Default passwords ('change_me') are still in use for Elasticsearch users. Set 'enforce_secure_passwords: false' to bypass this check for non-production environments."
           when: 
@@ -27,9 +27,9 @@
             - (elasticsearch_bootstrap_password == "change_me" or (elasticsearch_builtin_users | selectattr('password', 'equalto', 'change_me') | list | length > 0))
       run_once: true
 
-    - name: Setup built-in users
+    - name: "Setup built-in users"
       ansible.builtin.uri:
-        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_security/user/{{ item.username }}/_password"
+        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}:{{ elasticsearch_port }}/_security/user/{{ item.username }}/_password"
         url_username: "elastic"
         url_password: "{{ elasticsearch_bootstrap_password }}"
         method: POST
@@ -40,7 +40,7 @@
         body_format: json
       with_items: "{{ elasticsearch_builtin_users }}"
 
-    - name: Find & read extra roles from JSON file
+    - name: "Find & read extra roles from JSON file"
       ansible.builtin.slurp:
         src: "{{ item }}"
       with_first_found:
@@ -51,13 +51,13 @@
       register: extra_roles_file
       delegate_to: localhost
 
-    - name: Parse extra roles
+    - name: "Parse extra roles"
       set_fact:
         elasticsearch_extra_roles: "{{ extra_roles_file.results[0].content | b64decode | from_json }}"
 
-    - name: Setup extra roles
+    - name: "Setup extra roles"
       ansible.builtin.uri:
-        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_security/role/{{ item.name }}"
+        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}:{{ elasticsearch_port }}/_security/role/{{ item.name }}"
         url_username: elastic
         url_password: "{{ elasticsearch_bootstrap_password }}"
         method: POST
@@ -69,7 +69,7 @@
       with_items: "{{ elasticsearch_extra_roles.roles }}"
       when: (elasticsearch_extra_roles.get('roles', []) | length) > 0
 
-    - name: Find & read extra users from JSON file
+    - name: "Find & read extra users from JSON file"
       ansible.builtin.slurp:
         src: "{{ item }}"
       with_first_found:
@@ -80,13 +80,13 @@
       register: extra_users_file
       delegate_to: localhost
 
-    - name: Parse extra users
+    - name: "Parse extra users"
       set_fact:
         elasticsearch_extra_users: "{{ extra_users_file.results[0].content | b64decode | from_json }}"
 
-    - name: Setup extra users & assign role
+    - name: "Setup extra users & assign role"
       ansible.builtin.uri:
-        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_port }}/_security/user/{{ item.username }}"
+        url: "{{ elasticsearch_protocol }}://{{ inventory_hostname }}:{{ elasticsearch_port }}/_security/user/{{ item.username }}"
         url_username: elastic
         url_password: "{{ elasticsearch_bootstrap_password }}"
         method: POST

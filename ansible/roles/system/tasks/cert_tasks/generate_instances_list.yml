@@ -1,19 +1,19 @@
----
 - name: Make Elasticsearch Instances list file
   block:
     - name: Generate Elastic instances list from inventory
       ansible.builtin.set_fact:
         instances: >-
-          {{ instances | default([]) +
-            [ { 'name': 'es-node' ~ (idx + 1) | string,
-                'dns': 'es-node' ~ (idx + 1) | string ~ '.local',
-                'ip': (hostvars[item]['ansible_host']
-                       if (hostvars[item]['ansible_host'] is regex('^\d+\.\d+\.\d+\.\d+$'))
-                       else hostvars[item].get('ansible_default_ipv4', {}).get('address', 'UNKNOWN')) } ] }}
-      loop: "{{ groups['nodes'] | list }}"
-      loop_control:
-        index_var: idx
-
+          {{ (instances | default([])) + [ {
+              'name': (item | regex_replace('\\..*$', '')),
+              'dns':  item,
+              'ip':   (
+                        (hostvars[item].ansible_host
+                          if (hostvars[item].get('ansible_host','') is regex('^\\d+\\.\\d+\\.\\d+\\.\\d+$'))
+                          else hostvars[item].get('ansible_default_ipv4', {}).get('address', 'UNKNOWN')
+                        )
+                      )
+            } ] }}
+      loop: "{{ groups['nodes'] | list | sort }}"
     - name: Render {{ tls_instances_template_file_name }} file from template
       ansible.builtin.template:
         src: "{{ tls_instances_template_file_name }}"

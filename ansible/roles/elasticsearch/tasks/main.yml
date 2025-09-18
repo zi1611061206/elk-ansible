@@ -1,24 +1,24 @@
 ---
-- name: Prepare for Elasticsearch
+- name: "Prepare for Elasticsearch"
   ansible.builtin.import_tasks: prepare.yml
 
-- name: Setup Elasticsearch certificate
+- name: "Setup Elasticsearch certificate"
   ansible.builtin.import_tasks: setup_certs.yml
-  when: elasticsearch_security_enabled
+  when: elasticsearch_security_enabled | bool
   notify: Restart Elasticsearch
 
-- name: Setup Elasticsearch configuration
+- name: "Setup Elasticsearch configuration"
   ansible.builtin.import_tasks: setup_config.yml
   notify: Restart Elasticsearch
 
-- name: Pull Elasticsearch image
+- name: "Pull Elasticsearch image"
   ansible.builtin.import_tasks: pull_image.yml
 
-- name: Start Elasticsearch container
+- name: "Start Elasticsearch container"
   ansible.builtin.import_tasks: start_container.yml
 
-- name: Setup Elasticseatch users & roles
+- name: "Setup Elasticseatch users & roles"
   ansible.builtin.import_tasks: setup_user_role.yml
 
-- name: Setup Elasticseatch ILM policy
+- name: "Setup Elasticseatch ILM policy"
   ansible.builtin.import_tasks: setup_ilm_policy.yml

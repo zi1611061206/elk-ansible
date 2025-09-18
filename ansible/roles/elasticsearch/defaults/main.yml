@@ -25,7 +25,7 @@ elasticsearch_healthcheck_interval: "{{ container_default_healthcheck_interval |
 elasticsearch_healthcheck_timeout: "{{ container_default_healthcheck_timeout | default(30) }}s"
 elasticsearch_healthcheck_start_period: "{{ container_default_healthcheck_start_period | default(5) }}s"
 elasticsearch_healthcheck_enabled: "{{ container_healthcheck_enabled | default(true) }}"
-elasticsearch_healthcheck_cmd: ["CMD-SHELL", "curl -f -k -u elastic:{{ elasticsearch_bootstrap_password }} {{ elasticsearch_protocol }}://{{ inventory_hostname }}.local:{{ elasticsearch_monitor_port }}/_cluster/health?pretty"]
+elasticsearch_healthcheck_cmd: ["CMD-SHELL", "curl -f -k -u elastic:{{ elasticsearch_bootstrap_password }} {{ elasticsearch_protocol }}://{{ inventory_hostname }}:{{ elasticsearch_monitor_port }}/_cluster/health?pretty"]
 elasticsearch_healthcheck:
   test: "{{ elasticsearch_healthcheck_cmd if elasticsearch_healthcheck_enabled else none }}"
   interval: "{{ elasticsearch_healthcheck_interval }}"
@@ -63,7 +63,7 @@ elasticsearch_volumes:
 elasticsearch_extra_volumes: "{{ container_default_extra_volumes | default([]) }}"
 
 # Container Policy
-elasticsearch_container_restart_policy: "unless-stopped"
+elasticsearch_container_restart_policy: "{{ container_default_restart_policy | default('unless-stopped') }}"
 
 # Container Dimensions
 elasticsearch_max_open_files_soft: 65535
@@ -77,9 +77,17 @@ elasticsearch_dimensions:
   - "memlock:{{elasticsearch_max_memory_lock_soft}}:{{ elasticsearch_max_memory_lock_hard }}"
   - "nproc:{{ elasticsearch_max_processes_soft }}:{{ elasticsearch_max_processes_hard }}"
 
-# Common
-elastic_owner: "1000"
-elastic_group: "{{ elastic_owner }}"
+# Ownership
+elasticsearch_owner: "{{ elasticsearch_uid | default('1000') }}"
+elasticsearch_group: "{{ elasticsearch_gid | default(elasticsearch_owner) }}"
+
+# Timing
+elasticsearch_max_retries: "12"
+elasticsearch_retry_interval: "10"
+
+# --------------------------------------------------
+# TODO: Write plugins to merge custom configs instead below variables
+# --------------------------------------------------
 
 # File
 elasticsearch_log4j_file: "log4j2.properties"
@@ -102,10 +110,6 @@ elasticsearch_check_latest_version: true
 # JVM
 elasticsearch_jvm_xms: "512m"
 elasticsearch_jvm_xmx: "512m"
-
-# Timing
-elasticsearch_max_retries: "12"
-elasticsearch_retry_interval: "10"
 
 # Users - Roles
 elasticsearch_bootstrap_password: "change_me" # Super user: elastic
