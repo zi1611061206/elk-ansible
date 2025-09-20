@@ -1,0 +1,27 @@
+---
+- name: "Copy CA certificate for Kibana"
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/ca/ca.crt"
+    dest: "{{ kibana_host_ca_certificates_directory }}/ca.crt"
+    owner: "{{ kibana_owner }}"
+    group: "{{ kibana_group }}"
+    mode: "0644"
+  become: true
+
+- name: "Copy Kibana certificate"
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}.crt"
+    dest: "{{ kibana_host_ca_certificates_directory }}/kibana.crt"
+    owner: "{{ kibana_owner }}"
+    group: "{{ kibana_group }}"
+    mode: "0644"
+  become: true
+
+- name: "Copy Kibana key"
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}.key"
+    dest: "{{ kibana_host_ca_certificates_directory }}/kibana.key"
+    owner: "{{ kibana_owner }}"
+    group: "{{ kibana_group }}"
+    mode: "0600"
+  become: true

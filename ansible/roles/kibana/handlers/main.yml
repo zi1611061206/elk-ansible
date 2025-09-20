@@ -1,0 +1,8 @@
+---
+- name: "Restart Kibana Container"
+  community.docker.docker_container:
+    name: "{{ kibana_container_full_name }}"
+    state: started
+    restart: true
+  become: true
+  listen: "Restart Kibana"

@@ -1,0 +1,27 @@
+---
+- name: "Ensure Kibana directories exist on host"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(kibana_owner) }}"
+    group: "{{ item.group | default(kibana_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  become: true
+  loop:
+    - { path: "{{ kibana_host_config_directory }}" }
+    - { path: "{{ kibana_host_log_directory }}" }
+    - { path: "{{ kibana_host_ca_certificates_directory }}" }
+    - { path: "{{ kibana_host_data_directory }}", mode: '0770' }
+  loop_control:
+    label: "{{ item.path }}"
+  register: dir_result
+  failed_when: dir_result.failed and not dir_result.skipped
+
+- name: "Check Kibana http server port in use"
+  ansible.builtin.wait_for:
+    port: "{{ kibana_port | int }}"
+    state: drained
+    timeout: 10
+  ignore_errors: true
+  register: http_server_port_check_result
+  failed_when: http_server_port_check_result.failed | default(false)

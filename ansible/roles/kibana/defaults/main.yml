@@ -1,0 +1,110 @@
+---
+# Container Name
+kibana_container_name_prefix: "{{ container_name_prefix ~ '-' if container_name_prefix else '' }}"
+kibana_container_name_suffix: "{{ '-' ~ container_name_suffix if container_name_suffix else '' }}"
+kibana_container_full_name: "{{ kibana_container_name_prefix }}kibana{{ kibana_container_name_suffix }}"
+
+# Container Image
+kibana_version: "{{ elastic_version | default('8.12.2') }}"
+kibana_registry: "docker.elastic.co"
+kibana_namespace: "kibana"
+kibana_image: "{{ kibana_registry }}/{{ kibana_namespace }}/kibana"
+kibana_tag: "{{ kibana_version }}"
+kibana_image_full_name: "{{ kibana_image }}:{{ kibana_tag }}"
+
+# Container Network
+kibana_network_mode: "{{ container_network_mode | default('host') }}"
+kibana_protocol: "{{ (kibana_security_enabled | bool) | ternary('https','http') }}"
+kibana_host: "0.0.0.0"
+kibana_port: 5601
+kibana_monitor_port: "{{ kibana_port }}"
+
+# Container Healthcheck
+kibana_healthcheck_retries: "{{ container_default_healthcheck_retries | default(3) }}"
+kibana_healthcheck_interval: "{{ container_default_healthcheck_interval | default(30) }}s"
+kibana_healthcheck_timeout: "{{ container_default_healthcheck_timeout | default(30) }}s"
+kibana_healthcheck_start_period: "{{ container_default_healthcheck_start_period | default(5) }}s"
+kibana_healthcheck_enabled: "{{ container_healthcheck_enabled | default(true) }}"
+kibana_healthcheck_cmd: ["CMD-SHELL", "curl -f -k -u elastic:{{ elasticsearch_bootstrap_password }} {{ kibana_protocol }}://{{ inventory_hostname }}:{{ kibana_port }}/api/status  -H 'kbn-xsrf: true'"]
+kibana_healthcheck:
+  test: "{{ kibana_healthcheck_cmd if kibana_healthcheck_enabled else none }}"
+  interval: "{{ kibana_healthcheck_interval }}"
+  retries: "{{ kibana_healthcheck_retries }}"
+  timeout: "{{ kibana_healthcheck_timeout }}"
+  start_period: "{{ kibana_healthcheck_start_period }}"
+
+# Container Volume
+kibana_host_config_directory: "{{ node_config_directory }}/kibana"
+kibana_container_config_directory: "/usr/share/kibana/config"
+
+kibana_host_log_directory: "{{ node_log_directory }}/kibana"
+kibana_container_log_directory: "/var/log/kibana"
+
+kibana_host_ca_certificates_directory: "{{ node_ca_cert_directory }}/kibana"
+kibana_container_ca_certificates_directory: "/usr/share/kibana/config"
+
+kibana_host_data_directory: "{{ kibana_data_dir | default('/mnt/kibana-data') }}"
+kibana_container_data_directory: "/usr/share/kibana/data"
+
+kibana_volumes:
+  - "{{ kibana_host_ca_certificates_directory }}/ca.crt:{{ kibana_container_ca_certificates_directory }}/ca.crt:ro"
+  - "{{ kibana_host_ca_certificates_directory }}/kibana.crt:{{ kibana_container_ca_certificates_directory }}/kibana.crt:ro"
+  - "{{ kibana_host_ca_certificates_directory }}/kibana.key:{{ kibana_container_ca_certificates_directory }}/kibana.key:ro"
+  - "{{ kibana_host_config_directory }}/kibana.yml:{{ kibana_container_config_directory }}/kibana.yml:ro"
+  - "{{ kibana_host_log_directory }}:{{ kibana_container_log_directory }}"
+  - "{{ kibana_host_data_directory }}:{{ kibana_container_data_directory }}"
+  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
+  - "/etc/localtime:/etc/localtime:ro"
+
+kibana_extra_volumes: "{{ container_default_extra_volumes | default([]) }}"
+
+# Container Policy
+kibana_container_restart_policy: "{{ container_default_restart_policy | default('unless-stopped') }}"
+
+# Container Dimensions
+kibana_max_open_files_soft: 65535
+kibana_max_open_files_hard: 65535
+kibana_max_memory_lock_soft: -1
+kibana_max_memory_lock_hard: -1
+kibana_max_processes_soft: 65535
+kibana_max_processes_hard: 65535
+kibana_dimensions:
+  - "nofile:{{ kibana_max_open_files_soft }}:{{ kibana_max_open_files_hard }}"
+  - "memlock:{{ kibana_max_memory_lock_soft }}:{{ kibana_max_memory_lock_hard }}"
+  - "nproc:{{ kibana_max_processes_soft }}:{{ kibana_max_processes_hard }}"
+
+# Ownership
+kibana_owner: "{{ kibana_uid | default(1000) }}"
+kibana_group: "{{ kibana_gid | default(kibana_owner) }}"
+
+# Timinng
+kibana_max_retries: "12"
+kibana_retry_interval: "10"
+
+# Template
+kibana_config_template: "kibana.yml.j2"
+
+# Security and TLS
+kibana_security_enabled: "{{ elastic_security_enabled | default(true) }}"
+kibana_server_ssl_enabled: "{{ kibana_security_enabled | bool }}"
+kibana_elasticsearch_ssl_verification_mode: "certificate"
+
+# Configuration
+kibana_server_name: "kibana"
+
+# Cluster connectivity
+kibana_elasticsearch_port: "{{ elasticsearch_http_port | default(9200) }}"
+kibana_elasticsearch_hosts: >-
+  {{
+    groups['elasticsearch_hosts']
+    | map('extract', hostvars, 'ansible_host')
+    | map('regex_replace', '^', kibana_protocol ~ '://')
+    | map('regex_replace', '$', ':' ~ (kibana_elasticsearch_port | string))
+    | list
+  }}
+kibana_elasticsearch_username: "kibana_system"
+kibana_elasticsearch_password: >-
+  {{
+    (elasticsearch_builtin_users | selectattr('username','equalto', kibana_elasticsearch_username) | map(attribute='password') | first)
+    | default('change_me')
+  }}

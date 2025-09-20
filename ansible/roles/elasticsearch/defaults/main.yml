@@ -16,7 +16,7 @@ elasticsearch_image_full_name: "{{ elasticsearch_image }}:{{ elasticsearch_tag }
 elasticsearch_network_mode: "{{ container_network_mode | default('host') }}"
 elasticsearch_protocol: "{{ (elasticsearch_security_enabled | bool) | ternary('https', 'http') }}"
 elasticsearch_host: "0.0.0.0"
-elasticsearch_port: 9200
+elasticsearch_port: "{{ elasticsearch_http_port | default(9200) }}"
 elasticsearch_monitor_port: "{{ elasticsearch_port }}"
 
 # Container Healthcheck
@@ -85,10 +85,6 @@ elasticsearch_group: "{{ elasticsearch_gid | default(elasticsearch_owner) }}"
 elasticsearch_max_retries: "12"
 elasticsearch_retry_interval: "10"
 
-# --------------------------------------------------
-# TODO: Write plugins to merge custom configs instead below variables
-# --------------------------------------------------
-
 # File
 elasticsearch_log4j_file: "log4j2.properties"
 
@@ -96,13 +92,15 @@ elasticsearch_log4j_file: "log4j2.properties"
 elasticsearch_config_template: "elasticsearch.yml.j2"
 elasticsearch_jvm_template_file_name: "jvm.options.j2"
 
-# Configs
-elasticsearch_cluster_name: "elasticsearch-cluster"
-elasticsearch_license_type: "basic"
-elasticsearch_vm_max_map_count: "262144"
+# Security and TLS
 elasticsearch_security_enabled: "{{ elastic_security_enabled | default(true) }}"
 elasticsearch_transport_ssl_enabled: true
 elasticsearch_https_enabled: true
+
+# Configuration
+elasticsearch_cluster_name: "elasticsearch-cluster"
+elasticsearch_license_type: "basic"
+elasticsearch_vm_max_map_count: "262144"
 elasticsearch_monitoring_enabled: true
 elasticsearch_index_buffer_size_percentage: "10"
 elasticsearch_check_latest_version: true
@@ -110,23 +108,6 @@ elasticsearch_check_latest_version: true
 # JVM
 elasticsearch_jvm_xms: "512m"
 elasticsearch_jvm_xmx: "512m"
-
-# Users - Roles
-elasticsearch_bootstrap_password: "change_me" # Super user: elastic
-
-## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html
-## https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html
-elasticsearch_builtin_users:
-  - username: beats_system
-    password: change_me
-  - username: apm_system
-    password: change_me
-  - username: kibana_system
-    password: change_me
-  - username: logstash_system
-    password: change_me
-  - username: remote_monitoring_user
-    password: change_me
 
 # ILM
 elasticsearch_policy_interval_check: "10m"

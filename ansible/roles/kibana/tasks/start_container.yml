@@ -1,0 +1,34 @@
+---
+- name: "Start Kibana container"
+  community.docker.docker_container:
+    name: "{{ kibana_container_full_name }}"
+    image: "{{ kibana_image_full_name }}"
+    state: started
+    restart_policy: "{{ kibana_container_restart_policy }}"
+    network_mode: "{{ kibana_network_mode }}"
+    volumes: "{{ kibana_volumes + kibana_extra_volumes }}"
+    healthcheck: "{{ kibana_healthcheck if kibana_healthcheck_enabled else omit }}"
+    ulimits: "{{ kibana_dimensions }}"
+  register: kibana_container_start_result
+  retries: "{{ kibana_max_retries }}"
+  delay: "{{ kibana_retry_interval }}"
+  until: kibana_container_start_result is success
+  notify: Restart Kibana
+  become: true
+
+- name: "Flush to restart Kibana now"
+  meta: flush_handlers
+
+- name: "Wait for Kibana ready"
+  ansible.builtin.uri:
+    url: "{{ kibana_protocol }}://{{ inventory_hostname }}:{{ kibana_port }}/api/status"
+    method: GET
+    validate_certs: false
+    status_code: 200
+  register: kibana_status_check
+  until: kibana_status_check.status == 200
+  retries: "{{ kibana_max_retries }}"
+  delay: "{{ kibana_retry_interval }}"
+  ignore_errors: yes
+  no_log: false
+  become: true
