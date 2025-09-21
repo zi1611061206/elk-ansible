@@ -1,0 +1,8 @@
+---
+- name: "Restart Fluent Bit Container"
+  community.docker.docker_container:
+    name: "{{ fluentbit_container_full_name }}"
+    state: started
+    restart: true
+  become: true
+  listen: "Restart Fluent Bit"

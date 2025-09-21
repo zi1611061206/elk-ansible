@@ -1,0 +1,10 @@
+---
+- name: "Pull Fluent Bit image"
+  community.docker.docker_image:
+    name: "{{ fluentbit_image_full_name }}"
+    source: pull
+    state: present
+  register: fluentbit_image_pull_result
+  retries: "{{ fluentbit_max_retries }}"
+  delay: "{{ fluentbit_retry_interval }}"
+  until: fluentbit_image_pull_result is succeeded

@@ -1,0 +1,128 @@
+---
+# Container Name
+fluentbit_container_name_prefix: "{{ container_name_prefix ~ '-' if container_name_prefix else '' }}"
+fluentbit_container_name_suffix: "{{ '-' ~ container_name_suffix if container_name_suffix else '' }}"
+fluentbit_container_full_name: "{{ fluentbit_container_name_prefix }}fluentbit{{ fluentbit_container_name_suffix }}"
+
+# Docker Image
+fluentbit_version: "3.0.7-debug"
+fluentbit_registry: "{{ docker_registry }}"
+fluentbit_namespace: "fluent"
+fluentbit_image: "{{ fluentbit_registry }}/{{ fluentbit_namespace }}/fluent-bit"
+fluentbit_tag: "{{ fluentbit_version }}"
+fluentbit_image_full_name: "{{ fluentbit_image }}:{{ fluentbit_tag }}"
+
+# Container Network
+fluentbit_network_mode: "{{ container_network_mode | default('host') }}"
+fluentbit_http_server_enabled: true
+fluentbit_http_listen_address: "0.0.0.0"
+fluentbit_http_listen_port: "2020"
+
+# Conntainer Healthcheck
+fluentbit_healthcheck_retries: "{{ container_default_healthcheck_retries | default(3) }}"
+fluentbit_healthcheck_interval: "{{ container_default_healthcheck_interval | default(30) }}s"
+fluentbit_healthcheck_timeout: "{{ container_default_healthcheck_timeout | default(30) }}s"
+fluentbit_healthcheck_start_period: "{{ container_default_healthcheck_start_period | default(5) }}s"
+fluentbit_healthcheck_enabled: "{{ container_healthcheck_enabled | default(true) }}"
+fluentbit_healthcheck_cmd: ["CMD-SHELL", "curl -f http://{{ inventory_hostname }}:{{ fluentbit_http_listen_port }}/api/v1/health || exit 1"]
+fluentbit_healthcheck:
+  test: "{{ fluentbit_healthcheck_cmd if fluentbit_healthcheck_enabled else none }}"
+  interval: "{{ fluentbit_healthcheck_interval }}"
+  retries: "{{ fluentbit_healthcheck_retries }}"
+  timeout: "{{ fluentbit_healthcheck_timeout }}"
+  start_period: "{{ fluentbit_healthcheck_start_period }}"
+
+# Container Volume
+fluentbit_host_config_directory: "{{ node_config_directory }}/fluentbit"
+fluentbit_container_config_directory: "/usr/share/fluentbit/config"
+
+fluentbit_host_log_directory: "{{ node_log_directory }}/fluentbit"
+fluentbit_container_log_directory: "/var/log/fluentbit"
+
+fluentbit_host_ca_certificates_directory: "{{ node_ca_cert_directory }}/fluentbit"
+fluentbit_container_ca_certificates_directory: "/usr/share/fluentbit/config"
+
+fluentbit_host_buffer_directory: "{{ fluentbit_buffer_dir | default('/mnt/fluentbit-data') }}"
+fluentbit_container_buffer_directory: "/var/log/fluent-bit-buffer"
+
+fluentbit_volumes:
+  - "{{ fluentbit_host_ca_certificates_directory }}/ca.crt:{{ fluentbit_container_ca_certificates_directory }}/ca.crt:ro"
+  - "{{ fluentbit_host_ca_certificates_directory }}/fluentbit.crt:{{ fluentbit_container_ca_certificates_directory }}/fluentbit.crt:ro"
+  - "{{ fluentbit_host_ca_certificates_directory }}/fluentbit.key:{{ fluentbit_container_ca_certificates_directory }}/fluentbit.key:ro"
+  - "{{ fluentbit_host_config_directory }}/fluent-bit.conf:{{ fluentbit_container_config_directory }}/fluent-bit.conf:ro"
+  - "{{ fluentbit_host_config_directory }}/parsers.conf:{{ fluentbit_container_config_directory }}/parsers.conf:ro"
+  - "{{ fluentbit_host_log_directory }}:{{ fluentbit_container_log_directory }}"
+  - "{{ fluentbit_host_buffer_directory }}:{{ fluentbit_container_buffer_directory }}"
+  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
+  - "/etc/localtime:/etc/localtime:ro"
+  - "/proc:/host/proc:ro"
+
+fluentbit_extra_volumes: []
+
+# Container Policy
+fluentbit_container_restart_policy: "{{ container_default_restart_policy | default('unless-stopped') }}"
+
+# Container Dimensions
+fluentbit_max_open_files_soft: 65535
+fluentbit_max_open_files_hard: 65535
+fluentbit_max_memory_lock_soft: -1
+fluentbit_max_memory_lock_hard: -1
+fluentbit_max_processes_soft: 65535
+fluentbit_max_processes_hard: 65535
+fluentbit_dimensions:
+  - "nofile:{{ fluentbit_max_open_files_soft }}:{{ fluentbit_max_open_files_hard }}"
+  - "memlock:{{ fluentbit_max_memory_lock_soft }}:{{ fluentbit_max_memory_lock_hard }}"
+  - "nproc:{{ fluentbit_max_processes_soft }}:{{ fluentbit_max_processes_hard }}"
+
+# Ownership
+fluentbit_owner: "{{ fluentbit_uid | default(1000) }}"
+fluentbit_group: "{{ fluentbit_gid | default(fluentbit_owner) }}"
+
+# Timings
+fluentbit_max_retries: "12"
+fluentbit_retry_interval: "10"
+
+# Templates
+fluentbit_config_template: "fluent-bit.conf.j2"
+
+# Files
+fluentbit_parsers_file: "parsers.conf"
+
+# Security and TLS
+fluentbit_security_enabled: "{{ elastic_security_enabled | default(true) }}"
+fluentbit_server_ssl_enabled: "{{ fluentbit_security_enabled | bool }}"
+fluentbit_elasticsearch_ssl_verification_mode: "certificate"
+
+# Cluster connectivity
+fluentbit_elasticsearch_host: "{{ elasticsearch_hosts[0] if elasticsearch_hosts is defined and elasticsearch_hosts | length > 0 else 'localhost' }}"
+fluentbit_elasticsearch_port: "{{ elasticsearch_port | default(9200) }}"
+fluentbit_elasticsearch_tls: "{{ elasticsearch_security_enabled | default(false) }}"
+fluentbit_elasticsearch_tls_verify: false
+fluentbit_elasticsearch_username: "{{ elasticsearch_builtin_users | selectattr('username','equalto','elastic') | map(attribute='username') | first | default('elastic') }}"
+fluentbit_elasticsearch_password: "{{ elasticsearch_builtin_users | selectattr('username','equalto','elastic') | map(attribute='password') | first | default('') }}"
+
+# Basic Fluent Bit service settings
+fluentbit_listen: "{{ fluentbit_listen_address | default('0.0.0.0') }}"
+fluentbit_forward_port: "{{ fluentbit_forward_port_override | default(24224) }}"
+
+# Input definitions.  Each item in this list becomes an [INPUT] section
+# in the rendered configuration.  By default we listen for forward
+# messages on the configured port.
+fluentbit_inputs:
+  - name: forward
+    listen: "{{ fluentbit_listen }}"
+    port: "{{ fluentbit_forward_port }}"
+
+# Output definitions.  Each item in this list becomes an [OUTPUT]
+# section.  By default logs are forwarded to Elasticsearch.  Users can
+# override this list to add additional outputs or change destination.
+fluentbit_outputs:
+  - name: es
+    match: "**"
+    host: "{{ fluentbit_elasticsearch_host }}"
+    port: "{{ fluentbit_elasticsearch_port }}"
+    logstash_format: "On"
+    tls: "{{ 'On' if fluentbit_elasticsearch_tls | bool else 'Off' }}"
+    tls_verify: "{{ 'On' if fluentbit_elasticsearch_tls_verify | bool else 'Off' }}"
+    http_user: "{{ fluentbit_elasticsearch_username }}"
+    http_passwd: "{{ fluentbit_elasticsearch_password }}"
