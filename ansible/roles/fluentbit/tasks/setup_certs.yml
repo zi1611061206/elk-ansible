@@ -1,0 +1,9 @@
+---
+- name: "Copy CA certificate for Fluent Bit"
+  ansible.builtin.copy:
+    src: "{{ tls_output_dir }}/ca/ca.crt"
+    dest: "{{ fluentbit_host_ca_file }}"
+    owner: "{{ fluentbit_owner }}"
+    group: "{{ fluentbit_group }}"
+    mode: "0644"
+  become: true

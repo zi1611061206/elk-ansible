@@ -1,0 +1,44 @@
+---
+- name: "Ensure Fluent Bit directories exist on host"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(fluentbit_owner) }}"
+    group: "{{ item.group | default(fluentbit_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop:
+    - { path: "{{ fluentbit_host_config_directory }}" }
+    - { path: "{{ fluentbit_host_inputs_config_directory }}" }
+    - { path: "{{ fluentbit_host_parsers_config_directory }}" }
+    - { path: "{{ fluentbit_host_plugins_config_directory }}" }
+    - { path: "{{ fluentbit_host_filters_config_directory }}" }
+    - { path: "{{ fluentbit_host_outputs_config_directory }}" }
+    - { path: "{{ fluentbit_host_scripts_config_directory }}" }
+    - { path: "{{ fluentbit_host_log_directory }}" }
+    - { path: "{{ fluentbit_host_buffer_directory }}", mode: '0770' }
+    - { path: "{{ fluentbit_host_ca_certificates_directory }}" }
+  loop_control:
+    label: "{{ item.path }}"
+  register: dir_result
+  failed_when: dir_result.failed and not dir_result.skipped
+
+- name: "Check Fluent Bit service ports in use"
+  when: fluentbit_http_server_enabled | bool
+  ignore_errors: true
+  block:
+  - name: "Check Fluent Bit API port in use"
+    ansible.builtin.wait_for:
+      port: "{{ fluentbit_http_listen_port | int }}"
+      state: drained
+      timeout: 10
+    register: api_port_check_result
+    failed_when: api_port_check_result.failed | default(false)
+
+  - name: "Check Fluent Bit metrics port in use"
+    ansible.builtin.wait_for:
+      port: "{{ fluentbit_metrics_listen_port | int }}"
+      state: drained
+      timeout: 10
+    when: fluentbit_metrics_enabled | bool
+    register: metrics_port_check_result
+    failed_when: metrics_port_check_result.failed | default(false)

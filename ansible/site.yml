@@ -13,3 +13,4 @@
     - system
     - elasticsearch
     - kibana
+    - fluentbit

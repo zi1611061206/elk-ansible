@@ -1,0 +1,17 @@
+---
+- name: "Prepare for Fluent Bit"
+  ansible.builtin.import_tasks: prepare.yml
+
+- name: "Setup Fluent Bit certificates"
+  ansible.builtin.import_tasks: setup_certs.yml
+  when: elastic_security_enabled | bool
+  notify: Restart Fluent Bit
+
+- name: "Setup Fluent Bit configuration"
+  ansible.builtin.import_tasks: setup_config.yml
+
+- name: "Pull Fluent Bit image"
+  ansible.builtin.import_tasks: pull_image.yml
+
+- name: "Start Fluent Bit container"
+  ansible.builtin.import_tasks: start_container.yml

@@ -1,0 +1,106 @@
+---
+- name: Gather local file lists (role-scope)
+  vars:
+    _filters_tpl_glob:  "{{ role_path }}/templates/filters/*.j2"
+    _inputs_tpl_glob:   "{{ role_path }}/templates/inputs/*.j2"
+    _outputs_tpl_glob:  "{{ role_path }}/templates/outputs/*.j2"
+
+    _service_tpl_path:  "{{ role_path }}/templates/service.conf.j2"
+    _main_conf_tpl_path:     "{{ role_path }}/templates/fluent-bit.conf.j2"
+
+    _parsers_files_glob: "{{ role_path }}/files/parsers/*.conf"
+    _plugins_files_glob: "{{ role_path }}/files/plugins/*.so"
+    _scripts_files_glob: "{{ role_path }}/files/scripts/*.lua"
+  ansible.builtin.set_fact:
+    fb_filters_templates:  "{{ lookup('ansible.builtin.fileglob', _filters_tpl_glob, wantlist=True) }}"
+    fb_inputs_templates:   "{{ lookup('ansible.builtin.fileglob', _inputs_tpl_glob,  wantlist=True) }}"
+    fb_outputs_templates:  "{{ lookup('ansible.builtin.fileglob', _outputs_tpl_glob, wantlist=True) }}"
+
+    fb_service_template:   "{{ _service_tpl_path if lookup('ansible.builtin.fileglob', _service_tpl_path, wantlist=True) | length > 0 else '' }}"
+    fb_main_conf_template:    "{{ _main_conf_tpl_path if lookup('ansible.builtin.fileglob', _main_conf_tpl_path, wantlist=True) | length > 0 else '' }}"
+
+    fb_parsers_files:      "{{ lookup('ansible.builtin.fileglob', _parsers_files_glob, wantlist=True) }}"
+    fb_plugins_files:      "{{ lookup('ansible.builtin.fileglob', _plugins_files_glob, wantlist=True) }}"
+    fb_scripts_files:      "{{ lookup('ansible.builtin.fileglob', _scripts_files_glob, wantlist=True) }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Render inputs/*.j2 -> inputs.d/
+  become: true
+  ansible.builtin.template:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_inputs_config_directory }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fb_inputs_templates | default([]) }}"
+
+- name: Render filters/*.j2 -> filters.d/
+  become: true
+  ansible.builtin.template:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_filters_config_directory }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fb_filters_templates | default([]) }}"
+
+- name: Render outputs/*.j2 -> outputs.d/
+  become: true
+  ansible.builtin.template:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_outputs_config_directory }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fb_outputs_templates | default([]) }}"
+
+- name: Render service.conf.j2 -> service.conf
+  become: true
+  ansible.builtin.template:
+    src:  "{{ fb_service_template }}"
+    dest: "{{ fluentbit_host_service_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: fb_service_template | length > 0
+
+- name: Render fluent-bit.conf.j2 -> fluent-bit.conf
+  become: true
+  ansible.builtin.template:
+    src:  "{{ fb_main_conf_template }}"
+    dest: "{{ fluentbit_host_main_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: fb_main_conf_template | length > 0
+
+- name: Copy files/parsers/*.conf -> parsers.d/
+  become: true
+  ansible.builtin.copy:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_parsers_config_directory }}/{{ item | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fb_parsers_files | default([]) }}"
+
+- name: Copy files/plugins/*.conf -> plugins.d/
+  become: true
+  ansible.builtin.copy:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_plugins_config_directory }}/{{ item | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fb_plugins_files | default([]) }}"
+
+- name: Copy files/scripts/* -> scripts/
+  become: true
+  ansible.builtin.copy:
+    src:  "{{ item }}"
+    dest: "{{ fluentbit_host_scripts_config_directory }}/{{ item | basename }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ fb_scripts_files | default([]) }}"

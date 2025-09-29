@@ -1,0 +1,11 @@
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/format-schema #}
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file#config-include-file #}
+@INCLUDE service.conf
+{% if fluentbit_http_server_enabled | bool and fluentbit_metrics_enabled | bool %}
+@INCLUDE inputs.d/10-node-exporter.conf
+@INCLUDE outputs.d/10-prometheus-exporter.conf
+{% endif %}
+{% if fluentbit_elasticsearch_enabled | bool %}
+@INCLUDE upstream.conf
+@INCLUDE outputs.d/20-elasticsearch.conf
+{% endif %}

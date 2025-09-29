@@ -1,0 +1,40 @@
+---
+- name: "Start Fluent Bit container"
+  community.docker.docker_container:
+    name: "{{ fluentbit_container_full_name }}"
+    image: "{{ fluentbit_image_full_name }}"
+    image_name_mismatch: recreate
+    state: "started"
+    restart_policy: "{{ fluentbit_container_restart_policy }}"
+    network_mode: "{{ fluentbit_network_mode }}"
+    volumes: "{{ fluentbit_volumes + fluentbit_extra_volumes }}"
+    healthcheck: "{{ fluentbit_healthcheck if fluentbit_healthcheck_enabled else omit }}"
+    ulimits: "{{ fluentbit_dimensions }}"
+    env: "{{ fluentbit_environment }}"
+    entrypoint: ["/fluent-bit/bin/fluent-bit"]
+    command:
+      - "-c"
+      - "{{ fluentbit_container_config_directory }}/fluent-bit.conf"
+  register: fluentbit_container_start_result
+  retries: "{{ fluentbit_max_retries }}"
+  delay: "{{ fluentbit_retry_interval }}"
+  until: fluentbit_container_start_result is success
+  notify: Restart Fluent Bit
+  become: true
+
+- name: "Flush to restart Fluent Bit now"
+  meta: flush_handlers
+
+- name: "Wait for Fluent Bit ready"
+  ansible.builtin.uri:
+    url: "{{ fluentbit_healthcheck_url }}"
+    method: GET
+    validate_certs: false
+    status_code: 200
+  register: fluentbit_status_check
+  until: fluentbit_status_check.status == 200
+  retries: "{{ fluentbit_max_retries }}"
+  delay: "{{ fluentbit_retry_interval }}"
+  ignore_errors: yes
+  no_log: false
+  become: true

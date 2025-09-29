@@ -1,0 +1,13 @@
+{# https://docs.fluentbit.io/manual/data-pipeline/outputs/prometheus-exporter #}
+[OUTPUT]
+    Name  prometheus_exporter
+    Match {{ fluentbit_node_exporter_metrics_tag | default('node_metrics') }}
+    Host  {{ fluentbit_metrics_listen_address | default('0.0.0.0') }}
+    Port  {{ fluentbit_metrics_listen_port | default(9100) }}
+{# https://docs.fluentbit.io/manual/administration/multithreading#outputs #}
+    Workers {{ fluentbit_prometheus_exporter_metrics_workers | default(1) }}
+{% if fluentbit_prometheus_exporter_additional_keys | default({}) %}
+{% for key, value in fluentbit_prometheus_exporter_additional_keys.items() %}
+    Add_Label {{ key }} {{ value }}
+{% endfor %}
+{% endif %}

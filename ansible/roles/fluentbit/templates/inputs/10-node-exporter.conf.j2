@@ -1,0 +1,11 @@
+{# https://docs.fluentbit.io/manual/data-pipeline/inputs/node-exporter-metrics #}
+[INPUT]
+    Name node_exporter_metrics
+    metrics {{ fluentbit_metrics | join(',') | default('cpu,cpufreq,meminfo,diskstats,filesystem,uname,stat,time,loadavg,vmstat,netdev,filefd') }}
+    path.procfs {{ fluentbit_container_process | default('/host/proc') }}
+    path.sysfs {{ fluentbit_container_system | default('/host/sys') }}
+    scrape_interval {{ fluentbit_node_exporter_scrape_interval | default('10') }}
+    tag {{ fluentbit_node_exporter_metrics_tag | default('node_metrics') }}
+{# https://docs.fluentbit.io/manual/administration/multithreading#inputs #}
+{# https://docs.fluentbit.io/manual/administration/performance#run-input-plugins-in-threaded-mode #}
+    Threaded {{ 'On' if fluentbit_node_exporter_threaded | bool else 'Off' }}

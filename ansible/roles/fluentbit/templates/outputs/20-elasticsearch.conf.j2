@@ -1,0 +1,25 @@
+{# https://docs.fluentbit.io/manual/data-pipeline/outputs/elasticsearch #}
+[OUTPUT]
+    Name es
+    Match *
+    Upstream {{ fluentbit_elasticsearch_upstream_name }}
+    HTTP_User {{ fluentbit_elasticsearch_user }}
+    HTTP_Passwd {{ fluentbit_elasticsearch_password }}
+    Logstash_Format {{ 'On' if fluentbit_elasticsearch_logstash_format | bool else 'Off' }}
+    Logstash_Prefix {{ fluentbit_elasticsearch_logstash_prefix }}
+    Logstash_Prefix_Key {{ fluentbit_elasticsearch_logstash_prefix_key }}
+    Logstash_Prefix_Separator {{ fluentbit_elasticsearch_logstash_prefix_separator }}
+    Logstash_DateFormat {{ fluentbit_elasticsearch_logstash_dateformat }}
+    Time_Key {{ fluentbit_elasticsearch_time_key }}
+    Time_Key_Format {{ fluentbit_elasticsearch_time_key_format }}
+    Time_Key_Nanos {{ 'On' if fluentbit_elasticsearch_time_key_nanos | bool else 'Off' }}
+    Write_Operation {{ fluentbit_elasticsearch_write_operation }}
+    Replace_Dots {{ 'On' if fluentbit_elasticsearch_replace_dots | bool else 'Off' }}
+    Trace_Output {{ 'On' if fluentbit_elasticsearch_trace_output | bool else 'Off' }}
+    Trace_Error {{ 'On' if fluentbit_elasticsearch_trace_error | bool else 'Off' }}
+    Suppress_Type_Name {{ 'On' if fluentbit_elasticsearch_suppress_type_name | bool else 'Off' }}
+    Workers {{ fluentbit_elasticsearch_workers | int | default(2) }}
+    retry_limit {{ fluentbit_elasticsearch_retry_limit | int | default(5) }}
+    tls {{ 'On' if fluentbit_elasticsearch_tls | bool else 'Off' }}
+    tls.verify {{ 'On' if fluentbit_elasticsearch_tls_verify | bool else 'Off' }}
+    tls.ca_file {{ fluentbit_container_ca_file }}

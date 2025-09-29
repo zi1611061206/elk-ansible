@@ -1,0 +1,265 @@
+---
+# Container Name
+fluentbit_container_name_prefix: "{{ container_name_prefix ~ '-' if container_name_prefix else '' }}"
+fluentbit_container_name_suffix: "{{ '-' ~ container_name_suffix if container_name_suffix else '' }}"
+fluentbit_container_full_name: "{{ fluentbit_container_name_prefix }}fluentbit{{ fluentbit_container_name_suffix }}"
+
+# Docker Image
+fluentbit_version: "3.0.7-debug"
+fluentbit_registry: "{{ docker_registry }}"
+fluentbit_namespace: "fluent"
+fluentbit_image: "{{ fluentbit_registry }}/{{ fluentbit_namespace }}/fluent-bit"
+fluentbit_tag: "{{ fluentbit_version }}"
+fluentbit_image_full_name: "{{ fluentbit_image }}:{{ fluentbit_tag }}"
+
+# Container Network
+fluentbit_network_mode: "{{ container_network_mode | default('host') }}"
+
+# Conntainer Healthcheck
+fluentbit_healthcheck_retries: "{{ container_default_healthcheck_retries | default(3) }}"
+fluentbit_healthcheck_interval: "{{ container_default_healthcheck_interval | default(30) }}s"
+fluentbit_healthcheck_timeout: "{{ container_default_healthcheck_timeout | default(30) }}s"
+fluentbit_healthcheck_start_period: "{{ container_default_healthcheck_start_period | default(5) }}s"
+fluentbit_healthcheck_enabled: "{{ container_healthcheck_enabled | default(true) }}"
+fluentbit_healthcheck_url: "{{ fluentbit_http_server_protocol }}://{{ inventory_hostname }}:{{ fluentbit_http_listen_port }}/api/v1/health"
+fluentbit_healthcheck_cmd_http: ["CMD-SHELL", "curl -f {{ fluentbit_healthcheck_url }} || exit 1"]
+fluentbit_healthcheck_cmd_process: ["CMD-SHELL", "pgrep -x fluent-bit > /dev/null || exit 1"]
+fluentbit_healthcheck_cmd: >-
+  {{ fluentbit_healthcheck_cmd_http if fluentbit_http_server_enabled | bool else fluentbit_healthcheck_cmd_process }}
+fluentbit_healthcheck:
+  test: "{{ fluentbit_healthcheck_cmd if fluentbit_healthcheck_enabled else none }}"
+  interval: "{{ fluentbit_healthcheck_interval }}"
+  retries: "{{ fluentbit_healthcheck_retries }}"
+  timeout: "{{ fluentbit_healthcheck_timeout }}"
+  start_period: "{{ fluentbit_healthcheck_start_period }}"
+
+# Container Volumes
+fluentbit_host_config_directory: "{{ node_config_directory }}/fluentbit"
+fluentbit_container_config_directory: "/fluent-bit/etc"
+
+fluentbit_host_upstream_config_file: "{{ fluentbit_host_config_directory }}/upstream.conf"
+fluentbit_container_upstream_config_file: "{{ fluentbit_container_config_directory }}/upstream.conf"
+
+fluentbit_host_service_config_file: "{{ fluentbit_host_config_directory }}/service.conf"
+fluentbit_container_service_config_file: "{{ fluentbit_container_config_directory }}/service.conf"
+
+fluentbit_host_main_config_file: "{{ fluentbit_host_config_directory }}/fluent-bit.conf"
+fluentbit_container_main_config_file: "{{ fluentbit_container_config_directory }}/fluent-bit.conf"
+
+fluentbit_host_inputs_config_directory: "{{ fluentbit_host_config_directory }}/inputs.d"
+fluentbit_container_inputs_config_directory: "{{ fluentbit_container_config_directory }}/inputs.d"
+
+fluentbit_host_parsers_config_directory: "{{ fluentbit_host_config_directory }}/parsers.d"
+fluentbit_container_parsers_config_directory: "{{ fluentbit_container_config_directory }}/parsers.d"
+
+fluentbit_host_plugins_config_directory: "{{ fluentbit_host_config_directory }}/plugins.d"
+fluentbit_container_plugins_config_directory: "{{ fluentbit_container_config_directory }}/plugins.d"
+
+fluentbit_host_filters_config_directory: "{{ fluentbit_host_config_directory }}/filters.d"
+fluentbit_container_filters_config_directory: "{{ fluentbit_container_config_directory }}/filters.d"
+
+fluentbit_host_outputs_config_directory: "{{ fluentbit_host_config_directory }}/outputs.d"
+fluentbit_container_outputs_config_directory: "{{ fluentbit_container_config_directory }}/outputs.d"
+
+fluentbit_host_scripts_config_directory: "{{ fluentbit_host_config_directory }}/scripts"
+fluentbit_container_scripts_config_directory: "{{ fluentbit_container_config_directory }}/scripts"
+
+fluentbit_volumes_config:
+  - "{{ fluentbit_host_main_config_file }}:{{ fluentbit_container_main_config_file }}:ro"
+  - "{{ fluentbit_host_service_config_file }}:{{ fluentbit_container_service_config_file }}:ro"
+  - "{{ fluentbit_host_upstream_config_file }}:{{ fluentbit_container_upstream_config_file }}:ro"
+  - "{{ fluentbit_host_inputs_config_directory }}:{{ fluentbit_container_inputs_config_directory }}:ro"
+  - "{{ fluentbit_host_parsers_config_directory }}:{{ fluentbit_container_parsers_config_directory }}:ro"
+  - "{{ fluentbit_host_plugins_config_directory }}:{{ fluentbit_container_plugins_config_directory }}:ro"
+  - "{{ fluentbit_host_filters_config_directory }}:{{ fluentbit_container_filters_config_directory }}:ro"
+  - "{{ fluentbit_host_outputs_config_directory }}:{{ fluentbit_container_outputs_config_directory }}:ro"
+  - "{{ fluentbit_host_scripts_config_directory }}:{{ fluentbit_container_scripts_config_directory }}:ro"
+
+fluentbit_host_log_directory: "{{ node_log_directory }}/fluentbit"
+fluentbit_container_log_directory: "/var/log/fluentbit"
+
+fluentbit_host_buffer_directory: "{{ fluentbit_buffer_dir | default('/mnt/fluentbit-data') }}"
+fluentbit_container_buffer_directory: "/var/log/fluent-bit-buffer"
+
+fluentbit_volumes_log_and_data:
+  - "{{ fluentbit_host_log_directory }}:{{ fluentbit_container_log_directory }}:rw"
+  - "{{ fluentbit_host_buffer_directory }}:{{ fluentbit_container_buffer_directory }}:rw"
+
+fluentbit_host_ca_certificates_directory: "{{ node_ca_cert_directory }}/fluentbit"
+fluentbit_container_ca_certificates_directory: "{{ fluentbit_container_config_directory }}/certs"
+fluentbit_host_ca_file: "{{ fluentbit_host_ca_certificates_directory }}/ca.crt"
+fluentbit_container_ca_file: "{{ fluentbit_container_ca_certificates_directory }}/ca.crt"
+
+fluentbit_volumes_tls:
+  - "{{ fluentbit_host_ca_file }}:{{ fluentbit_container_ca_file }}:ro"
+
+fluentbit_host_process: "/proc"
+fluentbit_container_process: "/host/proc"
+fluentbit_host_system: "/sys"
+fluentbit_container_system: "/host/sys"
+
+fluentbit_volumes_monitoring:
+  - "{{ fluentbit_host_process }}:{{ fluentbit_container_process }}:ro"
+  - "{{ fluentbit_host_system }}:{{ fluentbit_container_system }}:ro"
+
+fluentbit_volumes_timezone:
+  - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_facts.os_family == 'Debian' else '' }}"
+  - "/etc/localtime:/etc/localtime:ro"
+
+fluentbit_volumes: >-
+  {{
+    (
+      ( proxy | default(false) | bool) | ternary(fluentbit_volumes_tls, [])
+      + fluentbit_volumes_config
+      + fluentbit_volumes_log_and_data
+      + fluentbit_volumes_monitoring
+      + fluentbit_volumes_timezone
+    )
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+fluentbit_extra_volumes: []
+
+# Container Policy
+fluentbit_container_restart_policy: "{{ container_default_restart_policy | default('unless-stopped') }}"
+
+# Container Dimensions
+fluentbit_max_open_files_soft: 65535
+fluentbit_max_open_files_hard: 65535
+fluentbit_max_memory_lock_soft: -1
+fluentbit_max_memory_lock_hard: -1
+fluentbit_max_processes_soft: 65535
+fluentbit_max_processes_hard: 65535
+fluentbit_dimensions:
+  - "nofile:{{ fluentbit_max_open_files_soft }}:{{ fluentbit_max_open_files_hard }}"
+  - "memlock:{{ fluentbit_max_memory_lock_soft }}:{{ fluentbit_max_memory_lock_hard }}"
+  - "nproc:{{ fluentbit_max_processes_soft }}:{{ fluentbit_max_processes_hard }}"
+
+# Container environment variables: https://docs.fluentbit.io/manual/administration/http-proxy
+fluentbit_environment: >-
+  {{
+    (
+      (proxy_enabled | default(false) | bool) | ternary({
+        "HTTP_PROXY":  http_proxy  | default(""),
+        "HTTPS_PROXY": https_proxy | default(""),
+        "NO_PROXY":    no_proxy    | default("")
+      }, {})
+    )
+    | combine(
+        (fluentbit_simd_enabled | bool)
+        | ternary({"DFLB_SIMD": "On"}, {})
+      )
+  }}
+
+# Ownership
+fluentbit_owner: "{{ fluentbit_uid | default(1000) }}"
+fluentbit_group: "{{ fluentbit_gid | default(fluentbit_owner) }}"
+
+# Timings
+fluentbit_max_retries: "12"
+fluentbit_retry_interval: "10"
+
+# Service common settings
+fluentbit_service_daemon_enabled: false  # Run Fluent Bit as a daemon (background service)
+fluentbit_service_flush: "1"  # Time interval to flush data to outputs, in seconds
+fluentbit_service_grace: "5"  # Time in seconds to wait for Fluent Bit to flush data before shutting down
+fluentbit_service_running_mode: "trace"  # possible values: error, warning, info, debug, trace
+fluentbit_service_coro_stack_size: "24576"  # Coroutine stack size in bytes
+fluentbit_service_scheduler_cap: "2000"  # Maximum number of coroutines that can be scheduled
+fluentbit_service_scheduler_base: "5"  # Base number of coroutines to be scheduled
+fluentbit_service_json_convert_nan_to_null: false  # Convert NaN values to null in JSON output
+fluentbit_service_sp_convert_from_str_to_num: true  # Convert string to number in structured parser
+fluentbit_simd_enabled: "{{ true if ansible_facts.architecture in ['x86_64', 'amd64', 'aarch64', 'arm64'] else false }}"  # Enable SIMD optimizations if supported by architecture: https://docs.fluentbit.io/manual/administration/performance#fluent-bit-and-simd-for-json-encoding
+
+# Security and TLS
+fluentbit_http_input_enabled: true
+fluentbit_http_input_verify: false
+fluentbit_http_input_verify_hostname: false
+fluentbit_http_input_sni: ""
+fluentbit_http_input_key_passphrase: ""
+
+# HTTP Server
+fluentbit_http_server_enabled: true  # Enable the built-in HTTP server for health checks and metrics APIs
+fluentbit_http_server_protocol: "http"  # Protocol for accessing the HTTP server (Fluent Bit 2.0+ does not supports https)
+fluentbit_http_listen_address: "0.0.0.0"  # Address to bind the HTTP server to
+fluentbit_http_listen_port: "2020"  # Port for the HTTP server
+fluentbit_hotload_enabled: "{{ fluentbit_http_server_enabled | bool }}"  # Enable hot reload of configuration via HTTP API
+
+# Logs, Parsers, Plugins
+fluentbit_log_file: "{{ fluentbit_container_log_directory }}/fluentbit.log"
+fluentbit_parsers_files:
+  - "{{ fluentbit_container_parsers_config_directory }}/parsers.conf"
+fluentbit_additional_plugins_files: []
+
+# Metrics and Monitoring
+fluentbit_metrics_enabled: "{{ fluentbit_http_server_enabled | bool }}"
+fluentbit_metrics:
+  - cpu
+  - cpufreq
+  - diskstats
+  - filefd
+  - filesystem
+  - loadavg
+  - meminfo
+  - netdev
+  - stat
+  - time
+  - uname
+  - vmstat
+  # - systemd collector
+  - thermal_zone
+  - nvme
+  # - processes
+fluentbit_node_exporter_scrape_interval: "10"  # Scrape interval in seconds for node exporter metrics input
+fluentbit_node_exporter_threaded: true  # Enable threaded mode for node exporter metrics input
+fluentbit_node_exporter_metrics_tag: "node_metrics"  # Tag for node exporter metrics input
+fluentbit_prometheus_exporter_additional_keys: {"region": "{{ region_name }}", "host": "{{ inventory_hostname }}"}  # Additional options for prometheus_exporter output plugin
+fluentbit_prometheus_exporter_metrics_workers: 1  # Number of workers for prometheus_exporter output plugin
+fluentbit_metrics_listen_address: "{{ fluentbit_http_listen_address | default('0.0.0.0') }}"
+fluentbit_metrics_listen_port: "2021"  # Port for metrics exposure, prometheus can scrape from here
+
+# Storage and Buffering
+fluentbit_storage_type: "filesystem"  # Options: filesystem, memory, or none
+fluentbit_storage_sync: "normal"  # Sync strategy for filesystem storage. Options: normal, full
+fluentbit_storage_checksum: false  # Enable checksum for data integrity
+fluentbit_storage_max_chunks_up: "128"  # Maximum number of chunks to keep in memory before flushing to disk
+fluentbit_storage_flush_on_shutdown: false  # Flush data to storage on shutdown
+fluentbit_storage_delete_irrecoverable_chunks: false  # Delete chunks that cannot be recovered
+fluentbit_storage_pause_on_chunks_overlimit: false  # Pause input when chunks exceed limit
+fluentbit_storage_total_limit_size: "1G"  # Total storage limit size (unit: K, M, G)
+fluentbit_storage_backlog_mem_limit: "5M"  # Memory limit for backlog (unit: K, M, G)
+
+# Networking
+fluentbit_net_dns_mode: "UDP"  # DNS resolution mode, options: UDP, TCP
+fluentbit_net_dns_resolver: "none"  # Type of DNS resolver to use, options: NONE, LEGACY, ASYNC
+fluentbit_net_connection_timeout: "10"  # Maximum time in seconds to wait for a connection to be established (include TLS handshake)
+fluentbit_net_connection_timeout_log_error: true  # Log an error when a connection times out
+fluentbit_net_keepalive: true  # The ability of a client to keep a TCP connection open in persistence mode
+fluentbit_net_keepalive_idle_timeout: "30"  # Maximum time in seconds a connection needs to be idle after keepalive is initiated
+fluentbit_net_max_worker_connections: "2000"  # Maximum number of simultaneous connections per worker thread
+fluentbit_net_backlog: "128"  # Maximum number of pending connections in the listen queue
+
+# ES Output connectivity
+fluentbit_elasticsearch_enabled: true  # Enable Elasticsearch output
+fluentbit_elasticsearch_upstream_name: "es_upstream"  # Upstream name for Elasticsearch output
+fluentbit_elasticsearch_user: "fluentbit"  # Username for Elasticsearch authentication
+fluentbit_elasticsearch_password: "changeme"  # Password for Elasticsearch authentication
+fluentbit_elasticsearch_write_operation: "create"  # Write operation for Elasticsearch output, options: index, create, update, upsert
+fluentbit_elasticsearch_replace_dots: true  # Replace dots in field names with underscores
+fluentbit_elasticsearch_trace_output: false  # Enable trace output for Elasticsearch output
+fluentbit_elasticsearch_trace_error: false  # Enable trace error for Elasticsearch output
+fluentbit_elasticsearch_suppress_type_name: true  # Suppress _type field in Elasticsearch output
+fluentbit_elasticsearch_workers: 4  # Number of workers for Elasticsearch output
+fluentbit_elasticsearch_retry_limit: 20  # Number of retries for Elasticsearch output
+fluentbit_elasticsearch_tls: "{{ elastic_security_enabled | default(false) }}"
+fluentbit_elasticsearch_tls_verify: false
+fluentbit_elasticsearch_logstash_format: true
+fluentbit_elasticsearch_logstash_prefix: "unknown"
+fluentbit_elasticsearch_logstash_prefix_key: "$TAG"
+fluentbit_elasticsearch_logstash_prefix_separator: "-"
+fluentbit_elasticsearch_logstash_dateformat: "log"
+fluentbit_elasticsearch_time_key: "@timestamp"
+fluentbit_elasticsearch_time_key_format: "%Y-%m-%dT%H:%M:%S"
+fluentbit_elasticsearch_time_key_nanos: false

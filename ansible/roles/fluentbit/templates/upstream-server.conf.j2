@@ -1,0 +1,10 @@
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/upstream-servers #}
+[UPSTREAM]
+    Name {{ fluentbit_elasticsearch_upstream_name }}
+
+{% for host in groups['elasticsearch_hosts'] %}
+[NODE]
+    Name {{ host }}
+    Host {{ hostvars[host].ansible_host | default(host) }}
+    Port {{ elasticsearch_http_port | default(9200) }}
+{% endfor %}

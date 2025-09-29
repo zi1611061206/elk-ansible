@@ -1,3 +1,5 @@
+region_name: "VN/SGN"
+
 # Config dirs
 node_config_directory: "/etc/elk-ansible"
 node_log_directory: "/var/log/elk-ansible"
@@ -6,6 +8,10 @@ node_custom_config_directory: "/etc/elk-ansible/config"
 
 # Network options
 disable_firewall: false
+proxy_enabled: false
+http_proxy: ""
+https_proxy: ""
+no_proxy: ""
 
 # Docker options
 docker_registry: "docker.io"

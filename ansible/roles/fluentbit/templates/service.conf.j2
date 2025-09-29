@@ -1,0 +1,63 @@
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file#service #}
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/yaml/service-section #}
+[SERVICE]
+    Daemon {{ 'On' if fluentbit_service_daemon_enabled | bool else 'Off' }}
+    Flush {{ fluentbit_service_flush | int | default(1) }}
+    Grace {{ fluentbit_service_grace | int | default(5) }}
+{# https://docs.fluentbit.io/manual/administration/scheduling-and-retries #}
+    scheduler.cap {{ fluentbit_service_scheduler_cap | default(2000) }}
+    scheduler.base {{ fluentbit_service_scheduler_base | default(5) }}
+    coro_stack_size {{ fluentbit_service_coro_stack_size | default(24576) }}
+    json.convert_nan_to_null {{ fluentbit_service_json_convert_nan_to_null | default(false) }}
+    sp.convert_from_str_to_num {{ fluentbit_service_sp_convert_from_str_to_num | default(true) }}
+{# https://docs.fluentbit.io/manual/administration/monitoring #}
+{# https://docs.fluentbit.io/manual/data-pipeline/pipeline-monitoring #}
+{% if fluentbit_http_server_enabled | bool %}
+    HTTP_Server On
+    HTTP_Listen {{ fluentbit_http_listen_address | default('0.0.0.0') }}
+    HTTP_Port {{ fluentbit_http_listen_port | default(2020) }}
+{% endif %}
+{% if fluentbit_metrics_enabled | bool %}
+    Metrics On
+{% endif %}
+{# https://docs.fluentbit.io/manual/administration/hot-reload #}
+{% if fluentbit_hotload_enabled | bool %}
+    Hot_Reload On
+{% endif %}
+    Log_Level {{ fluentbit_service_running_mode | default('info') }}
+    Log_File {{ fluentbit_log_file }}
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/yaml/parsers-section #}
+{% for parser in fluentbit_parsers_files | default([]) %}
+    Parsers_File {{ parser }}
+{% endfor %}
+{# https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/yaml/plugins-section #}
+{# https://docs.fluentbit.io/manual/fluent-bit-for-developers/golang-output-plugins #}
+{% for plugin in fluentbit_additional_plugins_files | default([]) %}
+    Plugins_File {{ plugin }}
+{% endfor %}
+{# https://docs.fluentbit.io/manual/administration/memory-management #}
+{# https://docs.fluentbit.io/manual/administration/backpressure #}
+{# https://docs.fluentbit.io/manual/administration/buffering-and-storage #}
+{% if fluentbit_storage_type == "filesystem" %}
+    storage.path {{ fluentbit_container_buffer_directory | default('none') }}
+    storage.sync {{ fluentbit_storage_sync | default('normal') }}
+    storage.checksum {{ 'On' if fluentbit_storage_checksum | bool else 'Off' }}
+    storage.max_chunks_up {{ fluentbit_storage_max_chunks_up | int | default(128) }}
+    storage.backlog.flush_on_shutdown {{ 'On' if fluentbit_storage_flush_on_shutdown | bool else 'Off' }}
+    storage.metrics {{ 'On' if fluentbit_metrics_enabled | bool else 'Off' }}
+    storage.delete_irrecoverable_chunks {{ 'On' if fluentbit_storage_delete_irrecoverable_chunks | bool else 'Off' }}
+{# FOR INPUT #}
+    storage.pause_on_chunks_overlimit {{ 'On' if fluentbit_storage_pause_on_chunks_overlimit | bool else 'Off' }}
+{# FOR OUTPUT #}
+    storage.total_limit_size {{ fluentbit_storage_total_limit_size | default('1G') }}
+    storage.backlog.mem_limit {{ fluentbit_storage_backlog_mem_limit | default('5M') }}
+{% endif %}
+{# https://docs.fluentbit.io/manual/administration/networking #}
+    DNS.mode {{ fluentbit_net_dns_mode | default('UDP') }}
+    DNS.resolver {{ fluentbit_net_dns_resolver | default('none') }}
+    net.connect_timeout {{ fluentbit_net_connection_timeout | int | default(10) }}
+    net.connect_timeout_log_error {{ 'On' if fluentbit_net_connection_timeout_log_error | bool else 'Off' }}
+    net.keepalive {{ 'On' if fluentbit_net_keepalive | bool else 'Off' }}
+    net.keepalive_idle_timeout {{ fluentbit_net_keepalive_idle_timeout | int | default(30) }}
+    net.max_worker_connections {{ fluentbit_net_max_worker_connections | int | default(2000) }}
+    net.backlog {{ fluentbit_net_backlog | int | default(128) }}

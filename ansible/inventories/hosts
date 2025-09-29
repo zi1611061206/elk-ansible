@@ -16,3 +16,6 @@ nodes
 
 [kibana_hosts:children]
 nodes
+
+[fluentbit_hosts:children]
+nodes
